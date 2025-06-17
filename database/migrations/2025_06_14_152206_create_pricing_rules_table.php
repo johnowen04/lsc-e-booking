@@ -22,7 +22,7 @@ return new class extends Migration
             $table->decimal('price_per_hour', 10, 2);
             $table->enum('type', ['regular', 'peak', 'promo', 'custom'])->default('regular');
             $table->integer('priority')->default(0);
-            $table->boolean('active')->default(true);
+            $table->boolean('is_active')->default(true);
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
