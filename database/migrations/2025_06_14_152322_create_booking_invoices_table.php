@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('booking_invoices', function (Blueprint $table) {
             $table->id();
+            $table->string('invoice_number')->unique();
             $table->foreignId('booking_id')->unique()->constrained()->cascadeOnDelete();
             $table->decimal('total_amount', 10, 2);
             $table->enum('status', ['unpaid', 'partially_paid', 'paid'])->default('unpaid');
