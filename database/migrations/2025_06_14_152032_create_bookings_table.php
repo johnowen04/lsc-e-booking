@@ -16,6 +16,8 @@ return new class extends Migration
             $table->uuid('uuid')->unique();
             $table->string('booking_number')->unique()->nullable();
             $table->foreignId('customer_id')->nullable()->constrained('customers')->nullOnDelete();
+            $table->string('customer_name')->nullable();
+            $table->string('customer_phone')->nullable();
             $table->foreignId('court_id')->constrained()->cascadeOnDelete();
             $table->dateTime('starts_at');
             $table->dateTime('ends_at');

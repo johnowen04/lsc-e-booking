@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Str;
 
 class Booking extends Model
 {
@@ -20,6 +21,8 @@ class Booking extends Model
         'uuid',
         'booking_number',
         'customer_id',
+        'customer_name',
+        'customer_phone',
         'court_id',
         'starts_at',
         'ends_at',
@@ -36,6 +39,15 @@ class Booking extends Model
         'ends_at' => 'datetime',
         'checked_in_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = (string) Str::uuid();
+            }
+        });
+    }
 
     /**
      * The customer who made the booking (nullable).
