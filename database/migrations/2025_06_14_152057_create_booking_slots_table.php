@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('court_id')->constrained()->cascadeOnDelete();
             $table->dateTime('slot_start');
             $table->dateTime('slot_end');
+            $table->enum('status', ['held', 'confirmed'])->default('held');
             $table->decimal('price', 10, 2);
         });
     }

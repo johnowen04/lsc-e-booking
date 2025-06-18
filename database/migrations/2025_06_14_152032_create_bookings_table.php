@@ -22,7 +22,8 @@ return new class extends Migration
             $table->dateTime('starts_at');
             $table->dateTime('ends_at');
             $table->enum('status', ['draft', 'confirmed', 'cancelled'])->default('draft');
-            $table->enum('attendance_status', ['pending', 'attended', 'no_show', 'late', 'cancelled'])->default('pending');
+            $table->enum('attendance_status', ['pending', 'attended', 'no_show', 'cancelled'])->default('pending');
+            $table->dateTime('must_check_in_before');
             $table->dateTime('checked_in_at')->nullable();
             $table->text('note')->nullable();
             $table->string('created_by_type')->nullable();
