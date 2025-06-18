@@ -38,4 +38,9 @@ trait HasStatusScopes
     {
         return $query->where('status', 'draft');
     }
+
+    public function scopeHeld($query)
+    {
+        return $query->where('status', 'held');
+    }
 }

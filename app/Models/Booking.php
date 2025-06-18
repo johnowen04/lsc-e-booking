@@ -28,6 +28,7 @@ class Booking extends Model
         'ends_at',
         'status',
         'attendance_status',
+        'must_check_in_before',
         'checked_in_at',
         'note',
         'created_by_type',
