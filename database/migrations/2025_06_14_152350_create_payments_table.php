@@ -13,11 +13,13 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
             $table->decimal('amount', 10, 2);
             $table->enum('method', ['cash', 'qris', 'transfer']);
             $table->enum('status', ['pending', 'paid', 'failed'])->default('pending');
             $table->dateTime('paid_at');
-            $table->string('reference_code')->nullable();
+            $table->string('reference_code')->nullable()->unique();
+            $table->string('provider_name')->nullable();
             $table->timestamps();
         });
     }
