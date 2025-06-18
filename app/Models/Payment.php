@@ -13,6 +13,7 @@ class Payment extends Model
     use HasFactory, HasStatusScopes, HasDateRangeScopes;
 
     protected $fillable = [
+        'uuid',
         'amount',
         'method',
         'status',

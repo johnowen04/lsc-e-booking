@@ -17,6 +17,8 @@ class Booking extends Model
     use HasFactory, HasStatusScopes, HasAttendanceScopes, HasDateRangeScopes;
 
     protected $fillable = [
+        'uuid',
+        'booking_number',
         'customer_id',
         'court_id',
         'starts_at',

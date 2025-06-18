@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('bookings', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
-            $table->string('booking_number')->unique();
+            $table->string('booking_number')->unique()->nullable();
             $table->foreignId('customer_id')->nullable()->constrained('customers')->nullOnDelete();
             $table->foreignId('court_id')->constrained()->cascadeOnDelete();
             $table->dateTime('starts_at');
@@ -26,6 +26,8 @@ return new class extends Migration
             $table->string('created_by_type')->nullable();
             $table->unsignedBigInteger('created_by_id')->nullable();
             $table->timestamps();
+
+            $table->unique(['court_id', 'starts_at', 'ends_at']);
         });
     }
 

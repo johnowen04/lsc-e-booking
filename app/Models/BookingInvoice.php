@@ -15,6 +15,7 @@ class BookingInvoice extends Model
     use HasFactory, HasStatusScopes, HasDateRangeScopes;
 
     protected $fillable = [
+        'uuid',
         'invoice_number',
         'booking_id',
         'total_amount',
