@@ -29,8 +29,8 @@ class PricingRule extends Model
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
-        'time_start' => 'datetime:H:i',
-        'time_end' => 'datetime:H:i',
+        'time_start' => 'datetime:H:i:s',
+        'time_end' => 'datetime:H:i:s',
         'price_per_hour' => 'decimal:2',
         'is_active' => 'boolean',
     ];

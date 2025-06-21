@@ -24,8 +24,11 @@ class Booking extends Model
         'customer_name',
         'customer_phone',
         'court_id',
+        'date',
         'starts_at',
         'ends_at',
+        'total_price',
+        'rescheduled_from_booking_id',
         'status',
         'attendance_status',
         'must_check_in_before',
@@ -33,11 +36,14 @@ class Booking extends Model
         'note',
         'created_by_type',
         'created_by_id',
+        'booking_invoice_id',
     ];
 
     protected $casts = [
+        'date' => 'date',
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
+        'must_check_in_before' => 'datetime',
         'checked_in_at' => 'datetime',
     ];
 
@@ -69,9 +75,9 @@ class Booking extends Model
     /**
      * The invoice related to this booking.
      */
-    public function invoice(): HasOne
+    public function invoice(): BelongsTo
     {
-        return $this->hasOne(BookingInvoice::class);
+        return $this->belongsTo(BookingInvoice::class);
     }
 
     /**
@@ -80,6 +86,23 @@ class Booking extends Model
     public function slots(): HasMany
     {
         return $this->hasMany(BookingSlot::class);
+    }
+
+    /**
+     * The booking that this booking was rescheduled from (if any).
+     */
+    public function rescheduledFrom(): BelongsTo
+    {
+        return $this->belongsTo(Booking::class, 'rescheduled_from_booking_id');
+    }
+
+    /**
+     * The booking that this booking was rescheduled to (if any).
+     * This is a one-to-one relationship where the current booking is the original.
+     */
+    public function rescheduledTo(): HasOne
+    {
+        return $this->hasOne(Booking::class, 'rescheduled_from_booking_id');
     }
 
     /**

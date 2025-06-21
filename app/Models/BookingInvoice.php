@@ -6,7 +6,7 @@ use App\Models\Scopes\HasDateRangeScopes;
 use App\Models\Scopes\HasStatusScopes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
@@ -17,7 +17,7 @@ class BookingInvoice extends Model
     protected $fillable = [
         'uuid',
         'invoice_number',
-        'booking_id',
+        'paid_amount',
         'total_amount',
         'status',
         'issued_at',
@@ -35,9 +35,9 @@ class BookingInvoice extends Model
     /**
      * The booking associated with this invoice.
      */
-    public function booking(): BelongsTo
+    public function bookings(): HasMany
     {
-        return $this->belongsTo(Booking::class);
+        return $this->hasMany(Booking::class, 'booking_invoice_id');
     }
 
     /**

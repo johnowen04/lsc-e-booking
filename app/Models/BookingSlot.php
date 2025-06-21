@@ -17,6 +17,7 @@ class BookingSlot extends Model
         'court_id',
         'slot_start',
         'slot_end',
+        'price',
         'status',
     ];
 
