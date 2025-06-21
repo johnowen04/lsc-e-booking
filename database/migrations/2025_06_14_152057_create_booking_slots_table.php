@@ -19,6 +19,7 @@ return new class extends Migration
             $table->dateTime('slot_end');
             $table->enum('status', ['held', 'confirmed'])->default('held');
             $table->decimal('price', 10, 2);
+            $table->timestamps();
         });
     }
 

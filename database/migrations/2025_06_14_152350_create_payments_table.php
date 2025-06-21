@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             $table->decimal('amount', 10, 2);
-            $table->enum('method', ['cash', 'qris', 'transfer']);
+            $table->enum('method', ['cash', 'qris', 'transfer', 'credit_card']);
             $table->enum('status', ['pending', 'paid', 'failed'])->default('pending');
             $table->dateTime('paid_at');
             $table->string('reference_code')->nullable()->unique();

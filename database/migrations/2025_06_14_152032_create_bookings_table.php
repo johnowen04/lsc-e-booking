@@ -19,8 +19,11 @@ return new class extends Migration
             $table->string('customer_name')->nullable();
             $table->string('customer_phone')->nullable();
             $table->foreignId('court_id')->constrained()->cascadeOnDelete();
+            $table->date('date');
             $table->dateTime('starts_at');
             $table->dateTime('ends_at');
+            $table->decimal('total_price', 10, 2)->default(0);
+            $table->foreignId('rescheduled_from_booking_id')->nullable()->constrained('bookings')->nullOnDelete();
             $table->enum('status', ['draft', 'confirmed', 'cancelled'])->default('draft');
             $table->enum('attendance_status', ['pending', 'attended', 'no_show', 'cancelled'])->default('pending');
             $table->dateTime('must_check_in_before');
@@ -28,6 +31,7 @@ return new class extends Migration
             $table->text('note')->nullable();
             $table->string('created_by_type')->nullable();
             $table->unsignedBigInteger('created_by_id')->nullable();
+            $table->foreignId('booking_invoice_id')->nullable()->constrained('booking_invoices')->nullOnDelete();
             $table->timestamps();
 
             $table->unique(['court_id', 'starts_at', 'ends_at']);
