@@ -13,6 +13,8 @@ class PricingRule extends Model
     use HasFactory, HasIsActiveScopes, HasDateRangeScopes;
 
     protected $fillable = [
+        'name',
+        'description',
         'court_id',
         'day_of_week',
         'time_start',

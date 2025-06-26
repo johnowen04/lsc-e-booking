@@ -18,6 +18,7 @@ class BookingSlot extends Model
         'slot_start',
         'slot_end',
         'price',
+        'pricing_rule_id',
         'status',
     ];
 
@@ -40,5 +41,13 @@ class BookingSlot extends Model
     public function court(): BelongsTo
     {
         return $this->belongsTo(Court::class);
+    }
+
+    /**
+     * The pricing rule applied to this slot.
+     */
+    public function pricingRule(): BelongsTo
+    {
+        return $this->belongsTo(PricingRule::class);
     }
 }

@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('pricing_rules', function (Blueprint $table) {
             $table->id();
+            $table->string('name');
+            $table->text('description')->nullable();
             $table->foreignId('court_id')->nullable()->constrained()->nullOnDelete();
             $table->tinyInteger('day_of_week')->nullable();
             $table->time('time_start');

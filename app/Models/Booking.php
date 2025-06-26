@@ -56,6 +56,54 @@ class Booking extends Model
         });
     }
 
+    public function generateBookingNumber(): string
+    {
+        if ($this->booking_number) {
+            return $this->booking_number;
+        }
+
+        $prefix = 'BK-' . $this->date->format('Ymd') . '-';
+        $suffix = strtoupper(Str::random(6));
+        $this->booking_number = $prefix . $suffix;
+
+        return $this->booking_number;
+    }
+
+    public function attend(): bool
+    {
+        if ($this->attendance_status === 'attended') {
+            return false;
+        }
+
+        if ($this->invoice->status === 'paid') {
+            $this->attendance_status = 'attended';
+            $this->checked_in_at = now();
+            $this->save();
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public function slotsGroupedByPricingRule(): array
+    {
+        return $this->slots()
+            ->with('pricingRule')
+            ->get()
+            ->groupBy(function ($slot) {
+                return $slot->pricingRule->name ?? 'Default';
+            })
+            ->map(function ($group) {
+                return [
+                    'slots' => $group,
+                    'price' => $group->first()->price ?? 0,
+                    'total_price' => $group->sum('price'),
+                ];
+            })
+            ->toArray();
+    }
+
     /**
      * The customer who made the booking (nullable).
      */
@@ -77,7 +125,7 @@ class Booking extends Model
      */
     public function invoice(): BelongsTo
     {
-        return $this->belongsTo(BookingInvoice::class);
+        return $this->belongsTo(BookingInvoice::class, 'booking_invoice_id');
     }
 
     /**
