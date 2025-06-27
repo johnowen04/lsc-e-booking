@@ -5,7 +5,6 @@ namespace App\Filament\Admin\Pages;
 use App\Filament\Admin\Resources\BookingResource;
 use App\Traits\InteractsWithBookingCart;
 use Filament\Pages\Page;
-use Illuminate\Support\Facades\Session;
 
 class BookingSchedule extends Page
 {
