@@ -64,6 +64,7 @@ class CreateBooking extends CreateRecord
     public function fillFromCart(): void
     {
         $this->groupedSlots = $this->getGroupedSlots();
+        $this->cartTotal = $this->calculateCartTotal();
     }
 
     protected function handleRecordCreation(array $data): Model

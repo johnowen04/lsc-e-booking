@@ -17,9 +17,15 @@ class BookingDateNavigator extends Component
     public string $quickPickedDate;
     public Carbon $minDate;
     public ?Carbon $maxDate = null;
+    public bool $isDateRangeControlHidden = false;
 
-    public function mount($selectedDate = null, $daysShown = 7, $minDate = null, $maxDate = null)
-    {
+    public function mount(
+        $selectedDate = null,
+        $daysShown = 7,
+        $minDate = null,
+        $maxDate = null,
+        bool $isDateRangeControlHidden = false
+    ) {
         $this->daysShown = $daysShown;
         $this->minDate = $minDate ? Carbon::parse($minDate)->startOfDay() : now()->startOfDay();
         $this->maxDate = $maxDate ? Carbon::parse($maxDate)->startOfDay() : null;
@@ -32,6 +38,8 @@ class BookingDateNavigator extends Component
         $this->selectedDate = $initialDate->toDateString();
 
         $this->updateTabDates();
+
+        $this->isDateRangeControlHidden = $isDateRangeControlHidden;
     }
 
     public function updateTabDates()
@@ -92,6 +100,10 @@ class BookingDateNavigator extends Component
 
     public function updatedQuickPickedDate($value)
     {
+        $this->validate([
+            'quickPickedDate' => 'date|after_or_equal:' . today()->toDateString(),
+        ]);
+
         $picked = Carbon::parse($value);
         $this->baseDate = $picked->copy();
         $this->updateTabDates();
@@ -131,7 +143,7 @@ class BookingDateNavigator extends Component
     {
         return collect($this->tabDates)->map(fn($date) => [
             'date' => $date,
-            'label' => Carbon::parse($date)->format('D, d M'),
+            'label' => Carbon::parse($date)->format('D, d M Y'),
             'isActive' => $this->activeTabDate === $date,
         ])->toArray();
     }

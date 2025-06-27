@@ -2,7 +2,6 @@
 
 namespace App\Livewire;
 
-use App\Filament\Admin\Resources\BookingResource;
 use App\Traits\InteractsWithBookingCart;
 use Livewire\Component;
 
@@ -11,8 +10,9 @@ class BookingCart extends Component
     use InteractsWithBookingCart;
 
     public array $groupedSlots = [];
-
     public int $cartTotal = 0;
+    public string $checkoutURL = '';
+    public bool $showActions = true;
 
     protected function getListeners()
     {
@@ -23,8 +23,10 @@ class BookingCart extends Component
         ];
     }
 
-    public function mount()
+    public function mount(string $checkoutURL = 'https://google.com', bool $showActions = true)
     {
+        $this->checkoutURL = $checkoutURL;
+        $this->showActions = $showActions;
         $this->refreshCart();
     }
 
@@ -49,7 +51,7 @@ class BookingCart extends Component
     public function proceedToCheckout()
     {
         $this->dispatch('proceedToCheckout');
-        return redirect(BookingResource::getUrl('create'));
+        return redirect($this->checkoutURL);
     }
 
     public function render()

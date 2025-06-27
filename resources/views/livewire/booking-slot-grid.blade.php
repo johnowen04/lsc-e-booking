@@ -16,81 +16,92 @@
         });
     }
 }">
-    <div class="overflow-auto border rounded-md dark:border-gray-700">
-        <table class="w-full table-auto text-sm text-center border-collapse">
-            <thead class="bg-gray-100 dark:bg-gray-800 text-black dark:text-gray-200">
-                <tr>
-                    <th class="p-3 border-b dark:border-gray-700 text-center">Time</th>
-                    @foreach ($courts as $court)
-                        <th class="p-3 border-b dark:border-gray-700">🏟 {{ $court->name }}</th>
-                    @endforeach
-                </tr>
-            </thead>
-
-            <tbody class="bg-white dark:bg-gray-900">
-                @foreach ($slots as $row)
-                    <tr class="border-b dark:border-gray-800">
-                        <td class="p-3 text-center font-medium text-black dark:text-gray-100 whitespace-nowrap">
-                            {{ $row['time'] }}
-                        </td>
-
+    <div class="booking-slot-grid">
+        <div class="table-container">
+            <table class="slot-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
                         @foreach ($courts as $court)
-                            @php
-                                $status = $row['slots'][$court->id];
-                                $inCart = collect($cart)->contains(
-                                    fn($slot) => $slot['date'] === $selectedDate &&
-                                        $slot['court_id'] === $court->id &&
-                                        $slot['hour'] === $row['hour'],
-                                );
-                                $isStart = $selectedCourtId === $court->id && $selectedStartHour === $row['hour'];
-                                $isInSelection =
-                                    $isStart ||
-                                    ($hoverHour !== null &&
-                                        $court->id === $selectedCourtId &&
-                                        $row['hour'] >= $selectedStartHour &&
-                                        $row['hour'] <= $hoverHour);
-                                $isEnd = $isInSelection && $row['hour'] === $hoverHour;
-                                $isDisabled = $status !== 'available' || $inCart;
-                            @endphp
-
-                            <td class="p-3">
-                                @if ($status === 'available')
-                                    @if ($isDisabled)
-                                        <x-filament::button :disabled="true" :color="$inCart ? 'info' : 'secondary'">
-                                            {{ $inCart ? 'In Cart' : 'Available' }}
-                                        </x-filament::button>
-                                    @else
-                                        <x-filament::button
-                                            wire:click="selectSlot({{ $court->id }}, {{ $row['hour'] }})"
-                                            wire:mouseover="setHoverHour({{ $row['hour'] }})" size="sm"
-                                            :color="$inCart ? 'info' : ($isInSelection ? 'indigo' : 'success')" class="!text-white font-semibold">
-                                            @if ($isStart)
-                                                Start
-                                            @elseif ($isEnd)
-                                                End
-                                            @elseif ($inCart)
-                                                In Cart
-                                            @elseif ($isInSelection)
-                                                Picked
-                                            @else
-                                                Book
-                                            @endif
-                                        </x-filament::button>
-                                    @endif
-                                @elseif ($status === 'held')
-                                    <x-filament::button :disabled="true" color="warning">
-                                        Held
-                                    </x-filament::button>
-                                @elseif ($status === 'booked')
-                                    <x-filament::button :disabled="true" color="danger">
-                                        Booked
-                                    </x-filament::button>
-                                @endif
-                            </td>
+                            <th>🏟 {{ $court->name }}</th>
                         @endforeach
                     </tr>
-                @endforeach
-            </tbody>
-        </table>
+                </thead>
+
+                <tbody>
+                    @foreach ($slots as $row)
+                        <tr>
+                            <td class="slot-time">
+                                {{ $row['time'] }}
+                            </td>
+
+                            @foreach ($courts as $court)
+                                @php
+                                    $status = $row['slots'][$court->id]['status'];
+                                    $inCart = collect($cart)->contains(
+                                        fn($slot) => $slot['date'] === $selectedDate &&
+                                            $slot['court_id'] === $court->id &&
+                                            $slot['hour'] === $row['hour'],
+                                    );
+                                    $isStart = $selectedCourtId === $court->id && $selectedStartHour === $row['hour'];
+                                    $isInSelection =
+                                        $isStart ||
+                                        ($hoverHour !== null &&
+                                            $court->id === $selectedCourtId &&
+                                            $row['hour'] >= $selectedStartHour &&
+                                            $row['hour'] <= $hoverHour);
+                                    $isEnd = $isInSelection && $row['hour'] === $hoverHour;
+                                    $isDisabled = $status !== 'available' || $inCart;
+                                @endphp
+
+                                <td class="group booking-slot-cell
+                                @if ($status === 'booked') booked
+                                @elseif ($status === 'held') held
+                                @elseif ($isDisabled) disabled
+                                @else available @endif"
+                                    @if (!$isDisabled && $status === 'available') wire:click="selectSlot({{ $court->id }}, {{ $row['hour'] }})"
+                                    wire:mouseover="setHoverHour({{ $row['hour'] }})" @endif>
+                                    <div class="booking-slot-content">
+                                        @if ($status === 'booked')
+                                            <span class="slot-label">Booked</span>
+                                        @elseif ($status === 'held')
+                                            <span class="slot-label">Held</span>
+                                        @elseif ($isDisabled)
+                                            <span class="slot-label {{ $inCart ? 'in-cart' : '' }}">
+                                                {{ $inCart ? 'In Cart' : 'Available' }}
+                                            </span>
+                                        @else
+                                            <span
+                                                class="slot-label
+                                            @if ($inCart) in-cart
+                                            @elseif($isInSelection) in-selection
+                                            @elseif($isStart || $isEnd) is-range-endpoint @endif">
+                                                @if ($isStart)
+                                                    Start
+                                                @elseif ($isEnd)
+                                                    End
+                                                @elseif ($inCart)
+                                                    In Cart
+                                                @elseif ($isInSelection)
+                                                    Picked
+                                                @else
+                                                    Book
+                                                @endif
+                                            </span>
+                                        @endif
+
+                                        @if (!empty($row['slots'][$court->id]['price']))
+                                            <span class="slot-price">
+                                                Rp {{ number_format($row['slots'][$court->id]['price']) }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                </td>
+                            @endforeach
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>

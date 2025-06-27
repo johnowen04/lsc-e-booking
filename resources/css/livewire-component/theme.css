@@ -1,0 +1,177 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+    /* Booking Slot Grid */
+    .booking-slot-grid .table-container {
+        @apply overflow-auto max-h-[60vh] relative border rounded-md dark:border-gray-700;
+    }
+
+    .booking-slot-grid .slot-table {
+        @apply w-full table-auto min-w-full border-collapse text-sm text-center border-collapse;
+    }
+
+    .booking-slot-grid thead th {
+        @apply sticky top-0 z-20 bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200;
+    }
+
+    .booking-slot-grid thead {
+        @apply bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200;
+    }
+
+    .booking-slot-grid th {
+        @apply p-3 border-b border-zinc-200 dark:border-zinc-700 text-center;
+    }
+
+    .booking-slot-grid th:first-child,
+    .booking-slot-grid td:first-child {
+        @apply sticky left-0 z-10 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-700;
+    }
+
+    .booking-slot-grid thead th:first-child {
+        @apply z-30;
+    }
+
+    .booking-slot-grid tbody {
+        @apply bg-white dark:bg-zinc-900;
+    }
+
+    .booking-slot-grid tr {
+        @apply border-b border-zinc-100 dark:border-zinc-800;
+    }
+
+    .booking-slot-grid .slot-time {
+        @apply p-3 text-center font-medium text-zinc-800 dark:text-zinc-100 whitespace-nowrap;
+    }
+
+    .booking-slot-grid .booking-slot-cell {
+        @apply relative p-3 text-center;
+    }
+
+    .booking-slot-grid .booking-slot-content {
+        @apply flex flex-col items-center justify-center space-y-1;
+    }
+
+    .booking-slot-grid .slot-label {
+        @apply text-sm font-semibold;
+    }
+
+    .booking-slot-grid .slot-price {
+        @apply text-xs text-zinc-500 dark:text-zinc-400;
+    }
+
+    /* Slot States */
+    .booking-slot-grid .booked {
+        @apply bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300 cursor-not-allowed;
+    }
+
+    .booking-slot-grid .held {
+        @apply bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 cursor-not-allowed;
+    }
+
+    .booking-slot-grid .disabled {
+        @apply bg-zinc-100 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed;
+    }
+
+    .booking-slot-grid .available {
+        @apply cursor-pointer hover:bg-sky-100 dark:hover:bg-sky-800;
+    }
+
+    /* Dynamic Label States */
+    .booking-slot-grid .in-cart {
+        @apply text-blue-600 dark:text-blue-400;
+    }
+
+    .booking-slot-grid .in-selection {
+        @apply text-indigo-600 dark:text-indigo-400;
+    }
+
+    .booking-slot-grid .is-range-endpoint {
+        @apply text-emerald-600 dark:text-emerald-400;
+    }
+
+    .booking-slot-grid th,
+    .booking-slot-grid td {
+        @apply border-r border-zinc-200 dark:border-zinc-700;
+    }
+
+    /* Optional: remove last column's border for cleaner look */
+    .booking-slot-grid th:last-child,
+    .booking-slot-grid td:last-child {
+        @apply border-r-0;
+    }
+
+    /* Booking Date Navigator */
+    .booking-date-navigator .range-controls {
+        @apply flex justify-between mb-2 items-center;
+    }
+
+    .booking-date-navigator .date-range-label {
+        @apply text-center font-medium text-gray-900 dark:text-white;
+    }
+
+    .booking-date-navigator .quick-picker {
+        @apply flex justify-center items-center gap-2 mb-4;
+    }
+
+    .booking-date-navigator .date-input {
+        @apply p-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500;
+    }
+
+    .booking-date-navigator .tab-controls {
+        @apply flex gap-2 overflow-x-auto whitespace-nowrap px-4 py-4 justify-start sm:justify-center;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE/Edge */
+    }
+
+    .booking-date-navigator .tab-controls::-webkit-scrollbar {
+        display: none; /* Chrome/Safari */
+    }
+
+    .booking-date-navigator .tab-button {
+        @apply flex-shrink-0 px-4 py-2 rounded text-sm font-medium;
+    }
+
+    /* Booking Cart */
+    .booking-cart .cart-header {
+        @apply flex justify-between items-center;
+    }
+
+    .booking-cart .cart-title {
+        @apply text-lg font-medium text-gray-900 dark:text-white;
+    }
+
+    .booking-cart .clear-cart-btn {
+        @apply mb-4 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300;
+    }
+
+    .booking-cart .cart-empty {
+        @apply text-center py-8;
+    }
+
+    .booking-cart .empty-icon {
+        @apply h-6 w-6 mx-auto text-gray-400;
+    }
+
+    .booking-cart .empty-text {
+        @apply mt-2 text-gray-500 dark:text-gray-400;
+    }
+
+    .booking-cart .cart-body {
+        @apply flex flex-col max-h-[90vh] px-2 pb-4; /* <-- add horizontal and bottom padding here */
+    }
+
+    .booking-cart .cart-items {
+        @apply space-y-4 overflow-y-auto pr-1 mb-4;
+        max-height: 65vh;
+    }
+
+    .booking-cart .cart-footer {
+        @apply mt-4 pt-4 border-t dark:border-gray-700;
+    }
+
+    .booking-cart .cart-total {
+        @apply flex justify-between text-lg font-semibold text-gray-900 dark:text-white;
+    }
+}

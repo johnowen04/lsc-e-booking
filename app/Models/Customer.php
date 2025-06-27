@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Hash;
 
-class Customer extends Authenticatable
+class Customer extends Authenticatable implements FilamentUser
 {
     use Notifiable;
 
@@ -66,5 +68,10 @@ class Customer extends Authenticatable
     public function bookingInvoices()
     {
         return $this->morphMany(BookingInvoice::class, 'created_by');
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return str_ends_with($this->email, '@company.com');
     }
 }

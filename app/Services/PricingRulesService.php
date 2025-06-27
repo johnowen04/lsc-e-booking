@@ -15,9 +15,8 @@ class PricingRulesService
     public function gerPricingRuleForHour(int $courtId, string $date, Carbon $hour): Model
     {
         $rules = $this->getCachedRules($courtId, $date);
-        $time = $hour->format('H:i:s');
 
-        $rule = $rules->first(function ($rule) use ($time) {
+        $rule = $rules->first(function ($rule) use ($hour) {
             $start = $rule->time_start;
             $end = $rule->time_end;
 
@@ -26,8 +25,8 @@ class PricingRulesService
             }
 
             return $start < $end
-                ? ($time >= $start && $time < $end)
-                : ($time >= $start || $time < $end);
+                ? ($hour >= $start && $hour < $end)
+                : ($hour >= $start || $hour < $end);
         });
 
         return $rule;

@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\BookingSlot;
 use App\Models\Court;
+use App\Services\PricingRulesService;
 use App\Traits\InteractsWithBookingCart;
 use Carbon\Carbon;
 use Filament\Notifications\Notification;
@@ -76,8 +77,8 @@ class BookingSlotGrid extends Component
     public function isSlotBooked($courtId, $hour): bool
     {
         foreach ($this->slots as $slot) {
-            if ($slot['hour'] === $hour && isset($slot['slots'][$courtId])) {
-                return in_array($slot['slots'][$courtId], ['booked', 'held']);
+            if ($slot['hour'] === $hour && isset($slot['slots'][$courtId]['status'])) {
+                return in_array($slot['slots'][$courtId]['status'], ['booked', 'held']);
             }
         }
         return false;
@@ -217,7 +218,11 @@ class BookingSlotGrid extends Component
                     ->where('court_id', $court->id)
                     ->first(fn($slot) => $slot->slot_start < $slotEnd && $slot->slot_end > $slotStart);
 
-                $row['slots'][$court->id] = match ($overlappingBooking->status ?? null) {
+                $price = app(PricingRulesService::class)->getPriceForHour($court->id, $this->selectedDate, Carbon::parse($hour . ':00'));
+
+                $row['slots'][$court->id]['price'] = $price;
+
+                $row['slots'][$court->id]['status'] = match ($overlappingBooking->status ?? null) {
                     'confirmed' => 'booked',
                     'held' => 'held',
                     default => 'available',
