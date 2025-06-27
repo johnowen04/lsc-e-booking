@@ -2,20 +2,21 @@
 
 namespace App\Livewire;
 
-use App\Traits\InteractsWithBookingCart;
-use Livewire\Component;
 use App\Models\BookingSlot;
 use App\Models\Court;
+use App\Traits\InteractsWithBookingCart;
 use Carbon\Carbon;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Session;
+use Livewire\Attributes\Modelable;
+use Livewire\Component;
 
 class BookingSlotGrid extends Component
 {
     use InteractsWithBookingCart;
 
-    public $selectedDate;
+    #[Modelable]
+    public string $selectedDate;
     public $courts;
     public $slots = [];
 
@@ -23,90 +24,24 @@ class BookingSlotGrid extends Component
     public $selectedStartHour = null;
     public $hoverHour = null;
 
-    public $baseDate;
-    public $daysShown = 7;
-    public $tabDates = [];
-    public $activeTabDate;
-    public $quickPickedDate;
-
     public function mount()
     {
-        $this->selectedDate = now()->toDateString();
         $this->courts = Court::isActive()->orderBy('name')->get();
         $this->generateSlots();
-
-        $this->baseDate = Carbon::parse(now());
-        $this->updateTabDates();
-
-        if (!Session::has('booking_cart')) {
-            Session::put('booking_cart', []);
-        }
     }
 
     public function updatedSelectedDate()
     {
         $cacheKey = "slots_{$this->selectedDate}";
         $ttl = $this->selectedDate === today()->toDateString()
-            ? now()->addSeconds(30) //ttl
-            : now()->addMinutes(2); //ttl
+            ? now()->addSeconds(30)
+            : now()->addMinutes(2);
 
         if (Cache::has($cacheKey)) {
-            $this->slots = Cache::pull($cacheKey);
+            $this->slots = Cache::get($cacheKey);
         } else {
             $this->generateSlots();
-            Cache::put($cacheKey, $this->slots, $ttl); //ttl
-        }
-    }
-
-    public function selectTab($date)
-    {
-        $this->activeTabDate = $date;
-        $this->selectedDate = $date;
-        $this->quickPickedDate = $date;
-        $this->updatedSelectedDate();
-    }
-
-    public function updateTabDates()
-    {
-        $this->tabDates = collect(range(0, $this->daysShown - 1))
-            ->map(fn($i) => $this->baseDate->copy()->addDays($i)->toDateString())
-            ->toArray();
-
-        $this->activeTabDate = $this->tabDates[0];
-        $this->selectedDate = $this->activeTabDate;
-        $this->quickPickedDate = $this->selectedDate;
-
-        $this->updatedSelectedDate();
-    }
-
-    public function previousRange()
-    {
-        $this->baseDate = $this->baseDate->subDays($this->daysShown);
-        $this->updateTabDates();
-    }
-
-    public function nextRange()
-    {
-        $this->baseDate = $this->baseDate->addDays($this->daysShown);
-        $this->updateTabDates();
-    }
-
-    public function updatedQuickPickedDate($value)
-    {
-        $picked = Carbon::parse($value);
-
-        // Set base date to start of week containing picked date (or adjust based on your logic)
-        $this->baseDate = $picked->copy()->startOfDay();
-        $this->updateTabDates();
-
-        // Set active tab to picked date (if it exists in the new range)
-        if (in_array($picked->toDateString(), $this->tabDates)) {
-            $this->selectTab($picked->toDateString());
-        } else {
-            // Optional: select closest available day in new range
-            $this->activeTabDate = $this->tabDates[0];
-            $this->selectedDate = $this->tabDates[0];
-            $this->updatedSelectedDate();
+            Cache::put($cacheKey, $this->slots, $ttl);
         }
     }
 
@@ -123,7 +58,7 @@ class BookingSlotGrid extends Component
 
             for ($h = $min; $h <= $max; $h++) {
                 if (
-                    $this->isSlotInCart($this->selectedCourtId, $h) ||
+                    $this->isSlotInCart($this->selectedDate, $this->selectedCourtId, $h) ||
                     $this->isSlotBooked($this->selectedCourtId, $h)
                 ) {
                     $this->hoverHour = $h - 1;
@@ -138,76 +73,118 @@ class BookingSlotGrid extends Component
         $this->hoverHour = $hour;
     }
 
-    public function hasBookedSlotBetween($courtId, $startHour, $endHour)
+    public function isSlotBooked($courtId, $hour): bool
     {
-        for ($hour = $startHour; $hour <= $endHour; $hour++) {
-            if ($this->isSlotBooked($courtId, $hour)) {
+        foreach ($this->slots as $slot) {
+            if ($slot['hour'] === $hour && isset($slot['slots'][$courtId])) {
+                return in_array($slot['slots'][$courtId], ['booked', 'held']);
+            }
+        }
+        return false;
+    }
+
+    public function isSlotInCart($date, $courtId, $hour): bool
+    {
+        return collect($this->getCart())->contains(
+            fn($slot) =>
+            $slot['date'] === $date &&
+                $slot['court_id'] === $courtId &&
+                $slot['hour'] === $hour
+        );
+    }
+
+    public function selectSlot($courtId, $hour)
+    {
+        if ($this->isSlotInCart($this->selectedDate, $courtId, $hour)) {
+            return $this->warnAndReset('This slot is already in your cart');
+        }
+
+        if ($this->isSlotBooked($courtId, $hour)) {
+            return $this->warnAndReset('This slot is already booked');
+        }
+
+        if ($this->selectedCourtId === $courtId) {
+            $court = $this->courts->firstWhere('id', $courtId);
+
+            if ($this->selectedStartHour === $hour) {
+                $this->addSlotsToCart($this->selectedDate, $courtId, $court->name, $hour);
+                $this->resetSelection();
+                return;
+            }
+
+            if ($this->selectedStartHour !== null) {
+                if ($hour < $this->selectedStartHour) {
+                    return $this->warnAndReset('Please select slots in forward order');
+                }
+
+                if ($this->selectionHasConflict($courtId, $this->selectedStartHour, $hour)) {
+                    return $this->warnAndReset('Your selection crosses unavailable slots');
+                }
+
+                $this->addSlotsToCart($this->selectedDate, $courtId, $court->name, $this->selectedStartHour, $hour);
+                $this->resetSelection();
+                return;
+            }
+        }
+
+        $this->selectedCourtId = $courtId;
+        $this->selectedStartHour = $hour;
+        $this->hoverHour = $hour;
+    }
+
+    public function isSelected($courtId, $hour): bool
+    {
+        if ($this->selectedCourtId !== $courtId) {
+            return false;
+        }
+
+        if ($this->selectedStartHour === null || $this->hoverHour === null) {
+            return false;
+        }
+
+        $start = min($this->selectedStartHour, $this->hoverHour);
+        $end = max($this->selectedStartHour, $this->hoverHour);
+
+        return $hour >= $start && $hour <= $end;
+    }
+
+    public function isEndSelection($courtId, $hour): bool
+    {
+        if ($this->selectedCourtId !== $courtId) {
+            return false;
+        }
+
+        if ($this->selectedStartHour === null || $this->hoverHour === null) {
+            return false;
+        }
+
+        return $hour === $this->hoverHour && $hour !== $this->selectedStartHour;
+    }
+
+    public function clearSelection()
+    {
+        $this->resetSelection();
+    }
+
+    protected function resetSelection()
+    {
+        $this->reset(['selectedCourtId', 'selectedStartHour', 'hoverHour']);
+    }
+
+    protected function selectionHasConflict($courtId, $startHour, $endHour): bool
+    {
+        for ($h = $startHour; $h <= $endHour; $h++) {
+            if ($this->isSlotInCart($this->selectedDate, $courtId, $h) || $this->isSlotBooked($courtId, $h)) {
                 return true;
             }
         }
         return false;
     }
 
-    public function isSelected($courtId, $hour)
+    protected function warnAndReset(string $message)
     {
-        if ($courtId !== $this->selectedCourtId) return false;
-        if ($this->selectedStartHour === null) return false;
-
-        $min = $this->selectedStartHour;
-        $max = $this->hoverHour !== null ? $this->hoverHour : $this->selectedStartHour;
-
-        if ($max < $min) {
-            $max = $min;
-        }
-
-        if ($this->hasBookedSlotBetween($courtId, $min, $max)) {
-            for ($h = $min + 1; $h <= $max; $h++) {
-                if ($this->isSlotBooked($courtId, $h)) {
-                    return $hour >= $min && $hour < $h;
-                }
-            }
-        }
-
-        return $hour >= $min && $hour <= $max;
-    }
-
-    public function isEndSelection($courtId, $hour)
-    {
-        if ($courtId !== $this->selectedCourtId) return false;
-        if ($this->selectedStartHour === null) return false;
-        if ($this->selectedStartHour === $hour) return false;
-
-        $min = $this->selectedStartHour;
-        $max = $this->hoverHour !== null ? $this->hoverHour : $this->selectedStartHour;
-
-        if ($max < $min) {
-            return false;
-        }
-
-        if ($this->hasBookedSlotBetween($courtId, $min, $max)) {
-            for ($h = $min + 1; $h <= $max; $h++) {
-                if ($this->isSlotBooked($courtId, $h)) {
-                    return $hour === ($h - 1);
-                }
-            }
-        }
-
-        return $hour === $max;
-    }
-
-    public function cancelSelection()
-    {
-        $this->reset(['selectedCourtId', 'selectedStartHour', 'hoverHour']);
-    }
-
-    public function isSlotBooked($courtId, $hour)
-    {
-        foreach ($this->slots as $slot) {
-            if ($slot['hour'] === $hour && isset($slot['slots'][$courtId])) {
-                return $slot['slots'][$courtId] === 'booked' || $slot['slots'][$courtId] === 'held';
-            }
-        }
-        return false;
+        Notification::make()->title($message)->warning()->send();
+        $this->resetSelection();
     }
 
     public function generateSlots()
@@ -238,9 +215,7 @@ class BookingSlotGrid extends Component
             foreach ($this->courts as $court) {
                 $overlappingBooking = $bookingSlots
                     ->where('court_id', $court->id)
-                    ->first(function ($slot) use ($slotStart, $slotEnd) {
-                        return $slot->slot_start < $slotEnd && $slot->slot_end > $slotStart;
-                    });
+                    ->first(fn($slot) => $slot->slot_start < $slotEnd && $slot->slot_end > $slotStart);
 
                 $row['slots'][$court->id] = match ($overlappingBooking->status ?? null) {
                     'confirmed' => 'booked',
@@ -251,70 +226,6 @@ class BookingSlotGrid extends Component
 
             return $row;
         })->values();
-    }
-
-    public function selectSlot($courtId, $hour)
-    {
-        if ($this->isSlotInCart($courtId, $hour)) {
-            return $this->warnAndReset('This slot is already in your cart');
-        }
-
-        if ($this->isSlotBooked($courtId, $hour)) {
-            return $this->warnAndReset('This slot is already booked');
-        }
-
-        if ($this->selectedCourtId === $courtId) {
-            $court = $this->courts->firstWhere('id', $courtId);
-
-            if ($this->selectedStartHour === $hour) {
-                $this->addSlotToCartFlexible($this->selectedDate, $courtId, $court->name, $hour);
-                $this->reset(['selectedCourtId', 'selectedStartHour', 'hoverHour']);
-                return;
-            }
-
-            if ($this->selectedStartHour !== null) {
-                if ($hour < $this->selectedStartHour) {
-                    return $this->warnAndReset('Please select slots in forward order');
-                }
-
-                if ($this->selectionHasConflict($courtId, $this->selectedStartHour, $hour)) {
-                    return $this->warnAndReset('Your selection crosses unavailable slots');
-                }
-
-                $this->addSlotToCartFlexible($this->selectedDate, $courtId, $court->name, $this->selectedStartHour, $hour);
-                $this->reset(['selectedCourtId', 'selectedStartHour', 'hoverHour']);
-                return;
-            }
-        }
-
-        $this->selectedCourtId = $courtId;
-        $this->selectedStartHour = $hour;
-        $this->hoverHour = $hour;
-    }
-
-    protected function warnAndReset(string $message)
-    {
-        Notification::make()->title($message)->warning()->send();
-        $this->reset(['selectedCourtId', 'selectedStartHour', 'hoverHour']);
-    }
-
-    protected function selectionHasConflict($courtId, $startHour, $endHour): bool
-    {
-        for ($h = $startHour; $h <= $endHour; $h++) {
-            if ($this->isSlotInCart($courtId, $h) || $this->isSlotBooked($courtId, $h)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    protected function getListeners()
-    {
-        return [
-            'bookingCreated' => 'cancelSelection',
-            'cartCleared' => '$refresh',
-            'cartItemRemoved' => '$refresh',
-        ];
     }
 
     public function render()

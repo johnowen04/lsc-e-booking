@@ -4,22 +4,46 @@ namespace App\Livewire;
 
 use App\Filament\Admin\Resources\BookingResource;
 use App\Traits\InteractsWithBookingCart;
-use Illuminate\Support\Collection;
 use Livewire\Component;
 
 class BookingCart extends Component
 {
     use InteractsWithBookingCart;
 
-    public $cartTotal = 0;
+    public array $groupedSlots = [];
+
+    public int $cartTotal = 0;
 
     protected function getListeners()
     {
         return [
-            'slotsAddedToCart' => '$refresh',
-            'cartCleared' => '$refresh',
-            'cartItemRemoved' => '$refresh'
+            'slotsAddedToCart' => 'refreshCart',
+            'cartCleared' => 'refreshCart',
+            'cartItemRemoved' => 'refreshCart',
         ];
+    }
+
+    public function mount()
+    {
+        $this->refreshCart();
+    }
+
+    public function refreshCart(): void
+    {
+        $this->groupedSlots = $this->getGroupedSlots()->toArray();
+        $this->updateTotal();
+    }
+
+    public function updateTotal(): void
+    {
+        $this->cartTotal = collect($this->getCart())->sum('price');
+    }
+
+    public function clearCart()
+    {
+        $this->clearBookingCart();
+        $this->updateTotal();
+        $this->dispatch('cartCleared');
     }
 
     public function proceedToCheckout()
@@ -30,11 +54,8 @@ class BookingCart extends Component
 
     public function render()
     {
-        $groupedSlots = $this->getGroupedSlots();
-        $this->cartTotal = $this->calculateCartTotal();
-
         return view('livewire.booking-cart', [
-            'groupedSlots' => $groupedSlots,
+            'groupedSlots' => $this->groupedSlots,
         ]);
     }
 }

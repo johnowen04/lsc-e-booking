@@ -2,7 +2,6 @@
 
 namespace App\Traits;
 
-use App\Models\BookingSlot;
 use App\Services\PricingRulesService;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -11,30 +10,34 @@ use Illuminate\Validation\ValidationException;
 
 trait InteractsWithBookingCart
 {
-    public function isSlotInCart($courtId, $hour)
-    {
-        $cart = Session::get('booking_cart', []);
+    protected string $cartSessionKey = 'booking_cart';
 
-        return collect($cart)->contains(function ($slot) use ($courtId, $hour) {
-            return $slot['court_id'] === $courtId &&
-                $slot['date'] === $this->selectedDate &&
-                $slot['hour'] === $hour;
-        });
+    protected string $eventCartCleared = 'cartCleared';
+    protected string $eventItemRemoved = 'cartItemRemoved';
+    protected string $eventSlotsAdded = 'slotsAddedToCart';
+
+    // ───── Public API ─────
+
+    public function isSlotInCart(string $date, int $courtId, int $hour): bool
+    {
+        return collect($this->getCart())->contains(
+            fn($slot) =>
+            $slot['court_id'] === $courtId &&
+                $slot['date'] === $date &&
+                $slot['hour'] === $hour
+        );
     }
 
     public function checkBookingConflicts(): void
     {
-        $cart = Session::get('booking_cart', []);
+        $cart = $this->getCart();
+        $grouped = collect($cart)->groupBy('group_id');
 
-        $groupedSlots = collect($cart)->groupBy('group_id');
-
-        if ($groupedSlots->isEmpty()) {
-            throw ValidationException::withMessages([
-                'cart' => 'Cart is empty.',
-            ]);
+        if ($grouped->isEmpty()) {
+            throw ValidationException::withMessages(['cart' => 'Cart is empty.']);
         }
 
-        $groupedSlots->each(function (Collection $group, string $groupId) {
+        $grouped->each(function (Collection $group, string $groupId) {
             $first = $group->first();
 
             if (! $first) {
@@ -46,22 +49,13 @@ trait InteractsWithBookingCart
             $courtId = $first['court_id'];
             $courtName = $first['court_name'] ?? "Court #{$courtId}";
             $date = $first['date'];
-            $minHour = $group->min('hour');
-            $maxHour = $group->max('hour');
 
-            $slotStart = Carbon::parse("{$date} {$minHour}:00");
-            $slotEnd = Carbon::parse("{$date} {$maxHour}:00")->addHour();
+            $start = Carbon::parse("{$date} {$group->min('hour')}:00");
+            $end = Carbon::parse("{$date} {$group->max('hour')}:00")->addHour();
 
-            $conflictExists = BookingSlot::query()
-                ->where('court_id', $courtId)
-                ->whereIn('status', ['confirmed', 'held'])
-                ->where(function ($query) use ($slotStart, $slotEnd) {
-                    $query->where('slot_start', '<', $slotEnd)
-                        ->where('slot_end', '>', $slotStart);
-                })
-                ->exists();
+            $conflict = $this->checkSlotConflict($courtId, $start, $end);
 
-            if ($conflictExists) {
+            if ($conflict) {
                 throw ValidationException::withMessages([
                     'cart' => "One or more selected slots for {$courtName} on {$date} are already booked.",
                 ]);
@@ -71,111 +65,132 @@ trait InteractsWithBookingCart
 
     public function calculateCartTotal(): int
     {
-        $cart = session('booking_cart', []);
-        $grouped = collect($cart)->groupBy('group_id');
-
-        return $grouped->sum(function ($group) {
-            return $this->calculateGroupTotal($group);
-        });
+        return collect($this->getCart())
+            ->groupBy('group_id')
+            ->sum(fn($group) => $this->calculateGroupTotal($group));
     }
 
-    protected function calculateGroupTotal($group): int
+    public function addSlotsToCart(string $date, int $courtId, ?string $courtName, int $startHour, ?int $endHour = null): void
     {
-        return collect($group)->sum('price');
-    }
-
-    protected function addSlotToCartFlexible(string $date, int $courtId, ?string $courtName, int $startHour, ?int $endHour = null): void
-    {
-        $cart = session('booking_cart', []);
+        $cart = $this->getCart();
         $isRange = $endHour !== null && $endHour > $startHour;
-
-        $groupId = $isRange ? uniqid('booking_group_') : null;
+        $groupId = uniqid('booking_group_');
         $end = $isRange ? $endHour : $startHour;
 
         for ($hour = $startHour; $hour <= $end; $hour++) {
-            $slotData = $this->buildSlotData($date, $courtId, $courtName, $hour, $groupId);
-            $cart[] = $slotData;
+            $slot = $this->buildSlotData($date, $courtId, $courtName, $hour, $groupId);
+            $cart[] = $slot;
         }
 
-        session(['booking_cart' => $cart]);
-
-        $this->dispatch('slotsAddedToCart');
-    }
-
-    protected function buildSlotData($date, $courtId, $courtName, $hour, ?string $groupId = null): array
-    {
-        $slotStart = Carbon::parse("{$date} {$hour}:00");
-        $slotEnd = $slotStart->copy()->addHour();
-
-        return [
-            'id' => uniqid(),
-            'group_id' => $groupId ?? uniqid('booking_group_'),
-            'court_id' => $courtId,
-            'court_name' => $courtName ?? "Court #{$courtId}",
-            'date' => $date,
-            'hour' => $hour,
-            'time' => "{$slotStart->format('H:i')} - {$slotEnd->format('H:i')}",
-            'formatted_date' => Carbon::parse($date)->format('D, j M Y'),
-            'price' => app(PricingRulesService::class)->getPriceForHour($courtId, $date, $slotStart),
-        ];
+        $this->saveCart($cart);
+        $this->fireEvent($this->eventSlotsAdded);
     }
 
     public function getGroupedSlots(): Collection
     {
-        $cart = session('booking_cart', []);
+        return collect($this->getCart())
+            ->groupBy('group_id')
+            ->map(function ($group) {
+                $first = $group->first();
+                $last = $group->last();
 
-        return collect($cart)->groupBy('group_id')->map(function ($group) {
-            $firstSlot = $group->first();
-            $lastSlot = $group->last();
-
-            $startTime = Carbon::parse("{$firstSlot['date']} {$firstSlot['hour']}:00")->format('H:i');
-            $endTime = Carbon::parse("{$lastSlot['date']} {$lastSlot['hour']}:00")->addHour()->format('H:i');
-
-            $totalPrice = $group->sum('price');
-
-            return [
-                'group_id' => $firstSlot['group_id'],
-                'court_id' => $firstSlot['court_id'],
-                'court_name' => $firstSlot['court_name'],
-                'date' => $firstSlot['date'],
-                'formatted_date' => $firstSlot['formatted_date'],
-                'start_time' => $startTime,
-                'end_time' => $endTime,
-                'duration' => count($group),
-                'slots' => $group,
-                'price' => $totalPrice,
-            ];
-        })->values();
+                return [
+                    'group_id'        => $first['group_id'],
+                    'court_id'        => $first['court_id'],
+                    'court_name'      => $first['court_name'],
+                    'date'            => $first['date'],
+                    'formatted_date'  => $first['formatted_date'],
+                    'start_time'      => Carbon::parse("{$first['date']} {$first['hour']}:00")->format('H:i'),
+                    'end_time'        => Carbon::parse("{$last['date']} {$last['hour']}:00")->addHour()->format('H:i'),
+                    'duration'        => count($group),
+                    'slots'           => $group,
+                    'price'           => $group->sum('price'),
+                ];
+            })
+            ->values();
     }
 
-    public function removeSlot($slotId): void
+    public function removeSlot(string $slotId): void
     {
-        $this->removeSlotById($slotId);
+        $cart = collect($this->getCart());
+        $slot = $cart->firstWhere('id', $slotId);
+
+        if (! $slot) return;
+
+        $groupId = $slot['group_id'];
+        $updated = $cart->reject(fn($item) => $item['group_id'] === $groupId)->values()->toArray();
+
+        $this->saveCart($updated);
+        $this->fireEvent($this->eventItemRemoved);
     }
 
-    protected function removeSlotById(string $slotId): void
+    public function clearBookingCart(): void
     {
-        $cart = Session::get('booking_cart', []);
-
-        $slot = collect($cart)->firstWhere('id', $slotId);
-
-        if (!$slot) return;
-
-        $groupId = $slot['group_id'] ?? null;
-
-        $cart = collect($cart)
-            ->reject(fn($item) => $item['group_id'] === $groupId)
-            ->values()
-            ->toArray();
-
-        Session::put('booking_cart', $cart);
-
-        $this->dispatch('cartItemRemoved');
+        $this->saveCart([]);
+        $this->fireEvent($this->eventCartCleared);
     }
 
-    public function clearCart(): void
+    // ───── Protected Methods ─────
+
+    protected function getCart(): array
     {
-        Session::put('booking_cart', []);
-        $this->dispatch('cartCleared');
+        return Session::get($this->cartSessionKey, []);
+    }
+
+    protected function saveCart(array $cart): void
+    {
+        Session::put($this->cartSessionKey, $cart);
+    }
+
+    protected function fireEvent(string $event): void
+    {
+        $this->dispatch($event);
+    }
+
+    protected function buildSlotData(string $date, int $courtId, ?string $courtName, int $hour, string $groupId): array
+    {
+        $start = Carbon::parse("{$date} {$hour}:00");
+        $end = $start->copy()->addHour();
+
+        return [
+            'id'              => uniqid(),
+            'group_id'        => $groupId,
+            'court_id'        => $courtId,
+            'court_name'      => $courtName ?? "Court #{$courtId}",
+            'date'            => $date,
+            'hour'            => $hour,
+            'time'            => "{$start->format('H:i')} - {$end->format('H:i')}",
+            'formatted_date'  => Carbon::parse($date)->format('D, j M Y'),
+            'price'           => $this->getPricingService()->getPriceForHour($courtId, $date, $start),
+        ];
+    }
+
+    protected function calculateGroupTotal(Collection $group): int
+    {
+        return $group->sum('price');
+    }
+
+    /**
+     * Override this in your component to implement actual logic.
+     */
+    protected function checkSlotConflict(int $courtId, Carbon $start, Carbon $end): bool
+    {
+        return \App\Models\BookingSlot::query()
+            ->where('court_id', $courtId)
+            ->whereIn('status', ['confirmed', 'held'])
+            ->where(
+                fn($query) =>
+                $query->where('slot_start', '<', $end)
+                    ->where('slot_end', '>', $start)
+            )
+            ->exists();
+    }
+
+    /**
+     * Override this to inject a mock or custom pricing rule logic.
+     */
+    protected function getPricingService(): PricingRulesService
+    {
+        return app(PricingRulesService::class);
     }
 }

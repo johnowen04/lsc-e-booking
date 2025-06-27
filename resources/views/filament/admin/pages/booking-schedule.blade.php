@@ -1,14 +1,19 @@
 <x-filament-panels::page>
-    <div x-data="{
-        showCartDrawer: false
-    }" x-init="window.addEventListener('slotsAddedToCart', () => showCartDrawer = true);">
-        {{-- Booking Grid --}}
+    <div x-data="{ showCartDrawer: false }" x-init="window.addEventListener('slotsAddedToCart', () => showCartDrawer = true)">
+
+        {{-- Date Navigator --}}
         <div :class="{ 'opacity-40 pointer-events-none filter blur-sm': showCartDrawer }"
             class="pr-0 w-full transition-all duration-300">
-            <livewire:booking-slot-grid />
+            <livewire:booking-date-navigator wire:model.live="selectedDate" />
         </div>
 
-        <!-- Bookmark-style floating cart toggle button attached to drawer edge -->
+        {{-- Booking Slot Grid --}}
+        <div :class="{ 'opacity-40 pointer-events-none filter blur-sm': showCartDrawer }"
+            class="pr-0 w-full transition-all duration-300">
+            <livewire:booking-slot-grid wire:model="selectedDate" />
+        </div>
+
+        {{-- Floating Cart Button --}}
         <div
             :style="`position: fixed; top: 105px; right: ${showCartDrawer ? '33%' : '0'}; z-index: 9999; transition: right 0.3s ease;`">
             <button x-on:click="showCartDrawer = !showCartDrawer"
@@ -18,7 +23,7 @@
             </button>
         </div>
 
-        {{-- Background overlay for cart --}}
+        {{-- Overlay --}}
         <div x-show="showCartDrawer" x-transition:enter="transition ease-out duration-300"
             x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
             x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100"
