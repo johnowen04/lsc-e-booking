@@ -21,48 +21,43 @@ class BookingService
         protected PaymentService $paymentService,
     ) {}
 
-    public function createInvoiceWithBookingsForOnline(array $data): BookingInvoice
+    public function createInvoiceWithBookingsForOnline(array $data, $cart): BookingInvoice
     {
-        return DB::transaction(function () use ($data) {
-            $invoice = $this->createInvoiceFromCart($data, false);
+        return DB::transaction(function () use ($data, $cart) {
+            $invoice = $this->createInvoiceFromCart($data, $cart, false);
             $amount = $this->calculatePaymentAmount((float) $invoice->total_amount, $data['is_paid_in_full']);
 
             $payment = $this->paymentService->createPayment(
                 $amount,
                 $invoice,
                 overrides: [
-                    'created_by_type' => auth()->user()::class,
-                    'created_by_id' => auth()->id(),
+                    'created_by_type' => filament()->auth()->user() ? filament()->auth()->user()::class : null,
+                    'created_by_id' => filament()->auth()->id(),
                 ]
             );
 
-            $snapUrl = $this->generateSnapUrlForInvoice($invoice, $payment, $data['is_paid_in_full']);
-            Cache::put("snap_{$invoice->id}", $snapUrl, now()->addMinutes(5)); //ttl
-
-            session()->forget('booking_cart');
-
+            $this->generateSnapUrlForInvoice($invoice, $payment, $data['is_paid_in_full']);
             return $invoice;
         });
     }
 
-    public function createInvoiceWithBookingsForWalkIn(array $data): BookingInvoice
+    public function createInvoiceWithBookingsForWalkIn(array $data, $cart): BookingInvoice
     {
-        return DB::transaction(function () use ($data) {
-            $invoice = $this->createInvoiceFromCart($data, true);
+        return DB::transaction(function () use ($data, $cart) {
+            $invoice = $this->createInvoiceFromCart($data, $cart, true);
             $amount = $this->calculatePaymentAmount((float) $invoice->total_amount, $data['is_paid_in_full']);
 
             $payment = $this->paymentService->createPayment(
                 $amount,
                 $invoice,
                 overrides: [
-                    'created_by_type' => filament()->auth()->user()::class,
+                    'created_by_type' => filament()->auth()->user() ? filament()->auth()->user()::class : null,
                     'created_by_id' => filament()->auth()->id(),
                 ],
             );
 
             if (PaymentMethod::from($data['payment_method']) === PaymentMethod::QRIS) {
-                $snapUrl = $this->generateSnapUrlForInvoice($invoice, $payment, $data['is_paid_in_full']);
-                Cache::put("snap_admin_{$invoice->id}", $snapUrl, now()->addMinutes(5)); //ttl
+                $this->generateSnapUrlForInvoice($invoice, $payment, $data['is_paid_in_full']);
             } else if (PaymentMethod::from($data["payment_method"]) === PaymentMethod::CASH) {
                 $payment = app(PaymentService::class)->updatePayment(
                     $payment->uuid,
@@ -72,7 +67,7 @@ class BookingService
                     $invoice,
                     paidAt: now()->toDateTimeString(),
                     overrides: [
-                        'created_by_type' => filament()->auth()->user()::class,
+                        'created_by_type' => filament()->auth()->user() ? filament()->auth()->user()::class : null,
                         'created_by_id' => filament()->auth()->id(),
                     ],
                 );
@@ -80,13 +75,10 @@ class BookingService
                 $redirectUrl = route('midtrans.success', [
                     'order_id' => $payment->uuid,
                 ]);
-
                 Cache::put("cash_{$invoice->id}", $redirectUrl, now()->addMinutes(5)); //ttl
             } else {
                 throw ValidationException::withMessages(['payment_method' => 'Invalid payment method selected.']);
             }
-
-            session()->forget('booking_cart');
 
             return $invoice;
         });
@@ -108,16 +100,20 @@ class BookingService
 
         $expectedTotal = array_sum(array_column($itemDetails, 'price'));
 
-        return $this->midtransService->generateSnapUrl(
+        $snapUrl = $this->midtransService->generateSnapUrl(
             $payment->uuid,
             $expectedTotal,
             $invoice->customer_name,
             $invoice->customer_phone,
             $itemDetails,
         );
+
+        Cache::put("snap_{$invoice->id}", $snapUrl, now()->addMinutes(5)); //ttl
+
+        return $snapUrl;
     }
 
-    protected function createInvoiceFromCart(array $data, bool $isWalkIn): BookingInvoice
+    protected function createInvoiceFromCart(array $data, $grouped, bool $isWalkIn): BookingInvoice
     {
         $customerName = $data['customer_name'] ?? 'Guest';
         $customerPhone = $data['customer_phone'] ?? '08123456789';
@@ -129,13 +125,11 @@ class BookingService
             'customer_id' => $customerId,
             'customer_name' => $customer?->name ?? $customerName,
             'customer_phone' => $customerPhone,
-            'created_by_type' => filament()->auth()->user()::class,
-            'created_by_id' => filament()->auth()->id(),
             'is_walk_in' => $isWalkIn,
+            'created_by_type' => filament()->auth()->user() ? filament()->auth()->user()::class : null,
+            'created_by_id' => filament()->auth()->id(),
         ]);
 
-        $cart = session('booking_cart', []);
-        $grouped = collect($cart)->groupBy('group_id');
         $invoiceTotal = 0;
 
         foreach ($grouped as $group) {
@@ -149,13 +143,10 @@ class BookingService
 
     protected function createBookingFromSlotGroup($group, $customer, $customerName, $customerPhone, $invoice): Booking
     {
-        $firstSlot = $group->first();
-        $lastSlot = $group->last();
-
-        $courtId = $firstSlot['court_id'];
-        $date = $firstSlot['date'];
-        $startsAt = Carbon::parse("{$date} {$firstSlot['hour']}:00");
-        $endsAt = Carbon::parse("{$date} {$lastSlot['hour']}:00")->addHour();
+        $courtId = $group['court_id'];
+        $date = $group['date'];
+        $startsAt = Carbon::parse($group['start_time']);
+        $endsAt = Carbon::parse($group['end_time']);
         $mustCheckInBefore = $startsAt->copy()->addMinutes(15); //ttl
 
         $booking = Booking::create([
@@ -170,9 +161,9 @@ class BookingService
             'must_check_in_before' => $mustCheckInBefore,
             'status' => 'held',
             'attendance_status' => 'pending',
-            'created_by_type' => filament()->auth()->user()::class,
-            'created_by_id' => filament()->auth()->id(),
             'booking_invoice_id' => $invoice->id,
+            'created_by_type' => filament()->auth()->user() ? filament()->auth()->user()::class : null,
+            'created_by_id' => filament()->auth()->id(),
         ]);
 
         $total = $this->createSlotsAndCalculateBookingTotal($booking, $courtId, $date, $startsAt, $endsAt);
@@ -187,7 +178,7 @@ class BookingService
             ->where('status', 'pending')
             ->latest()
             ->first();
-        
+
         $isPaidInFull = $invoice->status === 'partially_paid' ? false : true;
 
         if ($pendingPayment && !$forceNew) {
@@ -204,15 +195,13 @@ class BookingService
                 $invoice->getRemainingAmount(),
                 $invoice,
                 overrides: [
-                    'created_by_type' => $isWalkIn ? filament()->auth()->user()::class : auth()->user()::class,
-                    'created_by_id' => $isWalkIn ? filament()->auth()->id() : auth()->id(),
+                    'created_by_type' => filament()->auth()->user() ? filament()->auth()->user()::class : null,
+                    'created_by_id' => filament()->auth()->id(),
                 ],
             );
         }
 
         $snapUrl = $this->generateSnapUrlForInvoice($invoice, $pendingPayment, $isPaidInFull);
-
-        Cache::put("snap_{$invoice->id}", $snapUrl, now()->addMinutes(5)); //ttl
 
         return $snapUrl;
     }

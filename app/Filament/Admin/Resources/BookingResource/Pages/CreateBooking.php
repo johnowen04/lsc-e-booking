@@ -71,7 +71,10 @@ class CreateBooking extends CreateRecord
     {
         try {
             $this->checkBookingConflicts();
-            return $this->bookingService->createInvoiceWithBookingsForWalkIn($data);
+            $cart = $this->getGroupedSlots();
+            $invoice = $this->bookingService->createInvoiceWithBookingsForWalkIn($data, $cart);
+            $this->clearBookingCart();
+            return $invoice;
         } catch (\Throwable $th) {
             Log::error('Booking creation failed', [
                 'error' => $th->getMessage(),

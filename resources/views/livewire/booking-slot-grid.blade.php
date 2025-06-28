@@ -1,6 +1,3 @@
-@php
-    $cart = session('booking_cart', []);
-@endphp
 <div class="space-y-4" x-data="{
     init() {
         window.addEventListener('click', e => {
@@ -38,7 +35,7 @@
                             @foreach ($courts as $court)
                                 @php
                                     $status = $row['slots'][$court->id]['status'];
-                                    $inCart = collect($cart)->contains(
+                                    $inCart = collect($this->getCart())->contains(
                                         fn($slot) => $slot['date'] === $selectedDate &&
                                             $slot['court_id'] === $court->id &&
                                             $slot['hour'] === $row['hour'],

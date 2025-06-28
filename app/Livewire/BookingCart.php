@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Traits\InteractsWithBookingCart;
+use Filament\Notifications\Notification;
 use Livewire\Component;
 
 class BookingCart extends Component
@@ -33,12 +34,7 @@ class BookingCart extends Component
     public function refreshCart(): void
     {
         $this->groupedSlots = $this->getGroupedSlots()->toArray();
-        $this->updateTotal();
-    }
-
-    public function updateTotal(): void
-    {
-        $this->cartTotal = collect($this->getCart())->sum('price');
+        $this->cartTotal = $this->calculateCartTotal();
     }
 
     public function clearCart()
@@ -50,8 +46,18 @@ class BookingCart extends Component
 
     public function proceedToCheckout()
     {
-        $this->dispatch('proceedToCheckout');
-        return redirect($this->checkoutURL);
+        try {
+            $this->checkBookingConflicts();
+            $this->dispatch('proceedToCheckout');
+            return redirect($this->checkoutURL);
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Booking Conflict')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+            return;
+        }
     }
 
     public function render()
