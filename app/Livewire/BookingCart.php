@@ -40,15 +40,12 @@ class BookingCart extends Component
     public function clearCart()
     {
         $this->clearBookingCart();
-        $this->updateTotal();
-        $this->dispatch('cartCleared');
     }
 
     public function proceedToCheckout()
     {
         try {
             $this->checkBookingConflicts();
-            $this->dispatch('proceedToCheckout');
             return redirect($this->checkoutURL);
         } catch (\Exception $e) {
             Notification::make()

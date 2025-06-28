@@ -33,7 +33,6 @@ class CreateBooking extends CreateRecord
     {
         parent::mount();
         $this->fillFromCart();
-        $this->cartTotal = $this->calculateCartTotal();
     }
 
     public function getRedirectUrl(): string
@@ -55,7 +54,6 @@ class CreateBooking extends CreateRecord
     protected function getListeners(): array
     {
         return [
-            'proceedToCheckout' => 'fillFromCart',
             'slotsAddedToCart' => 'fillFromCart',
             'cartItemRemoved' => 'fillFromCart'
         ];
@@ -71,8 +69,7 @@ class CreateBooking extends CreateRecord
     {
         try {
             $this->checkBookingConflicts();
-            $cart = $this->getGroupedSlots();
-            $invoice = $this->bookingService->createInvoiceWithBookingsForWalkIn($data, $cart);
+            $invoice = $this->bookingService->createInvoiceWithBookingsForWalkIn($data, $this->groupedSlots);
             $this->clearBookingCart();
             return $invoice;
         } catch (\Throwable $th) {
