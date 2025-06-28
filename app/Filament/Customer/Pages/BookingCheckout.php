@@ -1,28 +1,31 @@
 <?php
 
-namespace App\Filament\Admin\Resources\BookingResource\Pages;
+namespace App\Filament\Customer\Pages;
 
-use App\Enums\PaymentMethod;
-use App\Filament\Admin\Pages\BookingSchedule;
-use App\Filament\Admin\Pages\BookingSummary;
-use App\Filament\Admin\Pages\PaymentStatus;
-use App\Filament\Admin\Resources\BookingResource;
 use App\Services\BookingService;
 use App\Traits\InteractsWithBookingCart;
+use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Form;
 use Filament\Notifications\Notification;
-use Filament\Resources\Pages\CreateRecord;
-use Illuminate\Database\Eloquent\Model;
+use Filament\Pages\Page;
 use Illuminate\Support\Facades\Log;
 
-class CreateBooking extends CreateRecord
+class BookingCheckout extends Page
 {
     use InteractsWithBookingCart;
-    protected static string $resource = BookingResource::class;
+    use InteractsWithForms;
 
-    protected static string $view = 'filament.admin.resources.booking-resource.pages.create-booking';
+    protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
+
+    protected static string $view = 'filament.customer.pages.booking-checkout';
+
+    protected static bool $shouldRegisterNavigation = false;
 
     public $groupedSlots;
     public $cartTotal;
+    public ?array $data = [];
 
     protected BookingService $bookingService;
 
@@ -33,24 +36,8 @@ class CreateBooking extends CreateRecord
 
     public function mount(): void
     {
-        parent::mount();
         $this->fillFromCart();
-    }
-
-    public function getRedirectUrl(): string
-    {
-        return PaymentMethod::from($this->data['payment_method']) === PaymentMethod::CASH ?
-            PaymentStatus::getUrl(['order_id' => $this->record->uuid, 'status_code' => 200]) :
-            PaymentStatus::getUrl(['order_id' => $this->record->uuid]);
-    }
-
-    public function getBreadcrumbs(): array
-    {
-        return [
-            BookingResource::getUrl() => 'Booking',
-            BookingSchedule::getUrl() => 'Schedule',
-            static::getUrl() => 'Create',
-        ];
+        $this->form->fill();
     }
 
     protected function getListeners(): array
@@ -67,13 +54,34 @@ class CreateBooking extends CreateRecord
         $this->cartTotal = $this->calculateCartTotal();
     }
 
-    protected function handleRecordCreation(array $data): Model
+    public function form(Form $form): Form
+    {
+        return $form
+            ->schema([
+                TextInput::make('customer_name')
+                    ->label('Customer Name')
+                    ->required(),
+
+                TextInput::make('customer_phone')
+                    ->label('Phone Number')
+                    ->tel()
+                    ->required(),
+
+                Checkbox::make('is_paid_in_full')
+                    ->label('Paid in Full')
+                    ->default(true)
+                    ->live(),
+            ])
+            ->statePath('data');
+    }
+
+    public function create(): void
     {
         try {
             $this->checkBookingConflicts();
-            $payment = $this->bookingService->createInvoiceWithBookingsForWalkIn($data, $this->groupedSlots);
+            $payment = $this->bookingService->createInvoiceWithBookingsForOnline($this->form->getState(), $this->groupedSlots);
             $this->clearBookingCart();
-            return $payment;
+            redirect(PaymentStatus::getUrl(['order_id' => $payment->uuid]));
         } catch (\Throwable $th) {
             Log::error('Booking creation failed', [
                 'error' => $th->getMessage(),

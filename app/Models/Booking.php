@@ -40,6 +40,7 @@ class Booking extends Model
     ];
 
     protected $casts = [
+        'uuid' => 'string',
         'date' => 'date',
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
@@ -51,7 +52,7 @@ class Booking extends Model
     {
         static::creating(function ($model) {
             if (empty($model->uuid)) {
-                $model->uuid = (string) Str::uuid();
+                $model->uuid = Str::uuid();
             }
         });
     }

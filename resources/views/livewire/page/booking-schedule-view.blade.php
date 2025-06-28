@@ -30,7 +30,7 @@
     {{-- Booking Slot Grid --}}
     <div :class="{ 'opacity-40 pointer-events-none filter blur-sm': showCartDrawer }"
         class="pr-0 w-full transition-all duration-300">
-        <livewire:booking-slot-grid wire:model="selectedDate" />
+        <livewire:booking-slot-grid wire:model.live="selectedDate" />
     </div>
 
     {{-- Floating Cart Button --}}

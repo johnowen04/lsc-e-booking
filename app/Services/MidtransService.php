@@ -57,8 +57,8 @@ class MidtransService
             ],
             'item_details' => $itemDetails,
             'callbacks' => [
-                'finish' => $callbackFinishUrl ?? route('midtrans.success', ['order_id' => $orderId]),
-                'error' => $callbackErrorUrl ?? route('midtrans.error', ['order_id' => $orderId]),
+                'finish' => $callbackFinishUrl,
+                'error' => $callbackErrorUrl,
             ],
             'expiry' => [
                 'start_time' => $startTime ?? now(new DateTimeZone('Asia/Jakarta'))->format('Y-m-d H:i:s O'),

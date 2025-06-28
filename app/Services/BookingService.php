@@ -3,10 +3,13 @@
 namespace App\Services;
 
 use App\Enums\PaymentMethod;
+use App\Filament\Admin\Pages\PaymentStatus as AdminPaymentStatus;
+use App\Filament\Customer\Pages\PaymentStatus as CustomerPaymentStatus;
 use App\Models\Booking;
 use App\Models\BookingSlot;
 use App\Models\Customer;
 use App\Models\BookingInvoice;
+use App\Models\Payment;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +24,7 @@ class BookingService
         protected PaymentService $paymentService,
     ) {}
 
-    public function createInvoiceWithBookingsForOnline(array $data, $cart): BookingInvoice
+    public function createInvoiceWithBookingsForOnline(array $data, $cart): Payment
     {
         return DB::transaction(function () use ($data, $cart) {
             $invoice = $this->createInvoiceFromCart($data, $cart, false);
@@ -34,14 +37,21 @@ class BookingService
                     'created_by_type' => filament()->auth()->user() ? filament()->auth()->user()::class : null,
                     'created_by_id' => filament()->auth()->id(),
                 ]
+            )->fresh();
+
+            $this->generateSnapUrlForInvoice(
+                $invoice,
+                $payment,
+                $data['is_paid_in_full'],
+                callbackFinishUrl: CustomerPaymentStatus::getUrl(['order_id' => $payment->uuid]),
+                callbackErrorUrl: CustomerPaymentStatus::getUrl(['order_id' => $payment->uuid]),
             );
 
-            $this->generateSnapUrlForInvoice($invoice, $payment, $data['is_paid_in_full']);
-            return $invoice;
+            return $payment;
         });
     }
 
-    public function createInvoiceWithBookingsForWalkIn(array $data, $cart): BookingInvoice
+    public function createInvoiceWithBookingsForWalkIn(array $data, $cart): Payment
     {
         return DB::transaction(function () use ($data, $cart) {
             $invoice = $this->createInvoiceFromCart($data, $cart, true);
@@ -57,7 +67,13 @@ class BookingService
             );
 
             if (PaymentMethod::from($data['payment_method']) === PaymentMethod::QRIS) {
-                $this->generateSnapUrlForInvoice($invoice, $payment, $data['is_paid_in_full']);
+                $this->generateSnapUrlForInvoice(
+                    $invoice,
+                    $payment,
+                    $data['is_paid_in_full'],
+                    callbackFinishUrl: AdminPaymentStatus::getUrl(['order_id' => $payment->uuid]),
+                    callbackErrorUrl: AdminPaymentStatus::getUrl(['order_id' => $payment->uuid]),
+                );
             } else if (PaymentMethod::from($data["payment_method"]) === PaymentMethod::CASH) {
                 $payment = app(PaymentService::class)->updatePayment(
                     $payment->uuid,
@@ -72,20 +88,23 @@ class BookingService
                     ],
                 );
 
-                $redirectUrl = route('midtrans.success', [
-                    'order_id' => $payment->uuid,
-                ]);
-                Cache::put("cash_{$invoice->id}", $redirectUrl, now()->addMinutes(5)); //ttl
+                $redirectUrl = AdminPaymentStatus::getUrl(['order_id' => $payment->uuid]);
+                Cache::put("cash_{$payment->uuid}", $redirectUrl, now()->addMinutes(5)); //ttl
             } else {
                 throw ValidationException::withMessages(['payment_method' => 'Invalid payment method selected.']);
             }
 
-            return $invoice;
+            return $payment;
         });
     }
 
-    protected function generateSnapUrlForInvoice(BookingInvoice $invoice, $payment, bool $isPaidInFull): string
-    {
+    protected function generateSnapUrlForInvoice(
+        BookingInvoice $invoice,
+        Payment $payment,
+        bool $isPaidInFull,
+        string $callbackFinishUrl,
+        string $callbackErrorUrl
+    ): string {
         $invoice->load('bookings.court');
 
         $itemDetails = $invoice->bookings->map(function ($booking) use ($isPaidInFull) {
@@ -106,9 +125,11 @@ class BookingService
             $invoice->customer_name,
             $invoice->customer_phone,
             $itemDetails,
+            $callbackFinishUrl,
+            $callbackErrorUrl,
         );
 
-        Cache::put("snap_{$invoice->id}", $snapUrl, now()->addMinutes(5)); //ttl
+        Cache::put("snap_{$payment->uuid}", $snapUrl, now()->addMinutes(5)); //ttl
 
         return $snapUrl;
     }
@@ -145,17 +166,17 @@ class BookingService
     {
         $courtId = $group['court_id'];
         $date = $group['date'];
-        $startsAt = Carbon::parse($group['start_time']);
-        $endsAt = Carbon::parse($group['end_time']);
+        $startsAt = Carbon::parse($date . $group['start_time']);
+        $endsAt = Carbon::parse($date . $group['end_time']);
         $mustCheckInBefore = $startsAt->copy()->addMinutes(15); //ttl
 
         $booking = Booking::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'uuid' => \Illuminate\Support\Str::uuid(),
             'customer_id' => $customer?->id,
             'customer_name' => $customer?->name ?? $customerName,
             'customer_phone' => $customerPhone,
             'court_id' => $courtId,
-            'date' => $startsAt->toDateString(),
+            'date' => $date,
             'starts_at' => $startsAt,
             'ends_at' => $endsAt,
             'must_check_in_before' => $mustCheckInBefore,
@@ -170,40 +191,6 @@ class BookingService
         $booking->update(['total_price' => $total]);
 
         return $booking;
-    }
-
-    public function retrySnapPayment(BookingInvoice $invoice, bool $forceNew = false, bool $isWalkIn = false): string
-    {
-        $pendingPayment = $invoice->payments()
-            ->where('status', 'pending')
-            ->latest()
-            ->first();
-
-        $isPaidInFull = $invoice->status === 'partially_paid' ? false : true;
-
-        if ($pendingPayment && !$forceNew) {
-            $status = $this->midtransService->checkTransactionStatus($pendingPayment->uuid);
-
-            if (in_array($status, ['expire', 'cancel', 'failure'])) {
-                $pendingPayment->update(['status' => 'failed']);
-                $pendingPayment = null;
-            }
-        }
-
-        if (!$pendingPayment || $forceNew) {
-            $pendingPayment = $this->paymentService->createPayment(
-                $invoice->getRemainingAmount(),
-                $invoice,
-                overrides: [
-                    'created_by_type' => filament()->auth()->user() ? filament()->auth()->user()::class : null,
-                    'created_by_id' => filament()->auth()->id(),
-                ],
-            );
-        }
-
-        $snapUrl = $this->generateSnapUrlForInvoice($invoice, $pendingPayment, $isPaidInFull);
-
-        return $snapUrl;
     }
 
     protected function calculatePaymentAmount(float $totalAmount, bool $isPaidInFull): float

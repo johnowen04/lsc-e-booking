@@ -29,6 +29,7 @@ class Payment extends Model
     ];
 
     protected $casts = [
+        'uuid' => 'string',
         'amount' => 'decimal:2',
         'paid_at' => 'datetime',
     ];
