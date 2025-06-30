@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Livewire\Page\Booking;
 
 use App\Traits\InteractsWithBookingCart;
 use Filament\Notifications\Notification;
@@ -59,7 +59,7 @@ class BookingCart extends Component
 
     public function render()
     {
-        return view('livewire.booking-cart', [
+        return view('livewire.page.booking.booking-cart', [
             'groupedSlots' => $this->groupedSlots,
         ]);
     }

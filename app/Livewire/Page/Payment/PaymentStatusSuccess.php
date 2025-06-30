@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Page\Payment;
 
-use App\Filament\Admin\Pages\BookingSummary as AdminBookingSummary;
-use App\Filament\Customer\Pages\BookingSummary as CustomerBookingSummary;
+use App\Filament\Admin\Pages\Booking\BookingSummary as AdminBookingSummary;
+use App\Filament\Customer\Pages\Booking\BookingSummary as CustomerBookingSummary;
 use App\Models\Payment;
 use Livewire\Component;
 
@@ -18,6 +18,9 @@ class PaymentStatusSuccess extends Component
     {
         $payment = Payment::where('uuid', $orderId)->first();
         $this->invoiceId = $payment->invoice()->uuid;
+
+        if (!$this->invoiceId) abort(404, 'Order ID not found');
+
         $this->statusCode = (int) $statusCode;
         $this->redirectUrl = $isAdmin ?
             AdminBookingSummary::getUrl(['order_id' => $this->invoiceId]) :

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Page;
+namespace App\Livewire\Page\Booking;
 
 use App\Traits\InteractsWithBookingCart;
 use Closure;
@@ -23,6 +23,6 @@ class BookingScheduleView extends Component
 
     public function render()
     {
-        return view('livewire.page.booking-schedule-view');
+        return view('livewire.page.booking.booking-schedule-view');
     }
 }

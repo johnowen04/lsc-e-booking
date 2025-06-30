@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Admin\Pages;
+namespace App\Filament\Admin\Pages\Booking;
 
 use App\Filament\Admin\Resources\BookingResource;
 use Filament\Pages\Page;
@@ -8,7 +8,7 @@ use Filament\Pages\Page;
 class BookingSchedule extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
-    protected static string $view = 'filament.admin.pages.booking-schedule';
+    protected static string $view = 'filament.admin.pages.booking.booking-schedule';
     protected static bool $shouldRegisterNavigation = false;
 
     public function getNaviagationLabel(): string

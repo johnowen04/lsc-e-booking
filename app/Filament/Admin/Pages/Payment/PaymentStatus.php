@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Admin\Pages;
+namespace App\Filament\Admin\Pages\Payment;
 
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Cache;
@@ -9,7 +9,7 @@ class PaymentStatus extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
-    protected static string $view = 'filament.admin.pages.payment-status';
+    protected static string $view = 'filament.admin.pages.payment.payment-status';
 
     protected static bool $shouldRegisterNavigation = false;
 

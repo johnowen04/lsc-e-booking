@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Livewire\Page\Booking;
 
 use Carbon\Carbon;
 use Livewire\Attributes\Modelable;
@@ -169,6 +169,6 @@ class BookingDateNavigator extends Component
 
     public function render()
     {
-        return view('livewire.booking-date-navigator');
+        return view('livewire.page.booking.booking-date-navigator');
     }
 }

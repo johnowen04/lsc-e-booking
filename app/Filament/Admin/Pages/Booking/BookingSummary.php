@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Customer\Pages;
+namespace App\Filament\Admin\Pages\Booking;
 
 use App\Models\BookingInvoice;
 use Filament\Pages\Page;
@@ -9,11 +9,12 @@ class BookingSummary extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
-    protected static string $view = 'filament.customer.pages.booking-summary';
+    protected static string $view = 'filament.admin.pages.booking.booking-summary';
 
     protected static bool $shouldRegisterNavigation = false;
 
     public $invoice;
+    public $payment;
 
     public function mount(): void
     {
@@ -24,5 +25,10 @@ class BookingSummary extends Page
         } else {
             // redirect()->to('/');
         }
+    }
+
+    public function getHeading(): string
+    {
+        return "";
     }
 }

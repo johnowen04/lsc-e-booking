@@ -3,9 +3,8 @@
 namespace App\Filament\Admin\Resources\BookingResource\Pages;
 
 use App\Enums\PaymentMethod;
-use App\Filament\Admin\Pages\BookingSchedule;
-use App\Filament\Admin\Pages\BookingSummary;
-use App\Filament\Admin\Pages\PaymentStatus;
+use App\Filament\Admin\Pages\Booking\BookingSchedule;
+use App\Filament\Admin\Pages\Payment\PaymentStatus;
 use App\Filament\Admin\Resources\BookingResource;
 use App\Services\BookingService;
 use App\Traits\InteractsWithBookingCart;

@@ -2,7 +2,7 @@
 
 namespace App\Filament\Admin\Resources\BookingResource\Pages;
 
-use App\Filament\Admin\Pages\BookingSchedule;
+use App\Filament\Admin\Pages\Booking\BookingSchedule;
 use App\Filament\Admin\Resources\BookingResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;

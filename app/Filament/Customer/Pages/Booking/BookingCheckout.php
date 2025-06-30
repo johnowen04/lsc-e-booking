@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Filament\Customer\Pages;
+namespace App\Filament\Customer\Pages\Booking;
 
+use App\Filament\Customer\Pages\Payment\PaymentStatus;
 use App\Services\BookingService;
 use App\Traits\InteractsWithBookingCart;
 use Filament\Forms\Components\Checkbox;
@@ -19,7 +20,7 @@ class BookingCheckout extends Page
 
     protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
 
-    protected static string $view = 'filament.customer.pages.booking-checkout';
+    protected static string $view = 'filament.customer.pages.booking.booking-checkout';
 
     protected static bool $shouldRegisterNavigation = false;
 

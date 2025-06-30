@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Enums\PaymentMethod;
-use App\Filament\Admin\Pages\PaymentStatus as AdminPaymentStatus;
-use App\Filament\Customer\Pages\PaymentStatus as CustomerPaymentStatus;
+use App\Filament\Admin\Pages\Payment\PaymentStatus as AdminPaymentStatus;
+use App\Filament\Customer\Pages\Payment\PaymentStatus as CustomerPaymentStatus;
 use App\Models\Booking;
 use App\Models\BookingSlot;
 use App\Models\Customer;

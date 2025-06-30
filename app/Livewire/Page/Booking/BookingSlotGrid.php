@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Livewire\Page\Booking;
 
 use App\Models\BookingSlot;
 use App\Models\Court;
@@ -235,6 +235,6 @@ class BookingSlotGrid extends Component
 
     public function render()
     {
-        return view('livewire.booking-slot-grid');
+        return view('livewire.page.booking.booking-slot-grid');
     }
 }

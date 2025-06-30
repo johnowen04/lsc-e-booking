@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Page;
+namespace App\Livewire\Page\Booking;
 
 use App\Models\BookingInvoice;
 use Livewire\Component;
@@ -18,6 +18,6 @@ class BookingSummaryView extends Component
     
     public function render()
     {
-        return view('livewire.page.booking-summary-view');
+        return view('livewire.page.booking.booking-summary-view');
     }
 }
