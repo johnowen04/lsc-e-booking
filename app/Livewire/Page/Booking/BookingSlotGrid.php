@@ -4,7 +4,7 @@ namespace App\Livewire\Page\Booking;
 
 use App\Models\BookingSlot;
 use App\Models\Court;
-use App\Services\PricingRulesService;
+use App\Services\PricingRuleService;
 use App\Traits\InteractsWithBookingCart;
 use Carbon\Carbon;
 use Filament\Notifications\Notification;
@@ -218,7 +218,7 @@ class BookingSlotGrid extends Component
                     ->where('court_id', $court->id)
                     ->first(fn($slot) => $slot->slot_start < $slotEnd && $slot->slot_end > $slotStart);
 
-                $price = app(PricingRulesService::class)->getPriceForHour($court->id, $this->selectedDate, Carbon::parse($hour . ':00'));
+                $price = app(PricingRuleService::class)->getPriceForHour($court->id, $this->selectedDate, Carbon::parse($hour . ':00'));
 
                 $row['slots'][$court->id]['price'] = $price;
 

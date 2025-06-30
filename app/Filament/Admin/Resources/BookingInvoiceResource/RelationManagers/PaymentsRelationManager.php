@@ -40,7 +40,7 @@ class PaymentsRelationManager extends RelationManager
                     ->dateTime('d M Y H:i'),
                 TextEntry::make('method')
                     ->label('Payment Method')
-                    ->formatStateUsing(fn($state) => Str::headline($state)),
+                    ->formatStateUsing(fn($state) => PaymentMethod::from($state)->label()),
                 TextEntry::make('status')
                     ->label('Status')
                     ->badge()

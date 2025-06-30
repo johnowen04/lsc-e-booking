@@ -4,7 +4,8 @@ namespace App\Traits;
 
 use App\Models\Customer;
 use App\Models\User;
-use App\Services\PricingRulesService;
+use App\Services\BookingSlotService;
+use App\Services\PricingRuleService;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Session;
@@ -200,19 +201,16 @@ trait InteractsWithBookingCart
      */
     protected function checkSlotConflict(int $courtId, Carbon $start, Carbon $end): bool
     {
-        return \App\Models\BookingSlot::query()
-            ->where('court_id', $courtId)
-            ->whereIn('status', ['confirmed', 'held'])
-            ->where(
-                fn($query) =>
-                $query->where('slot_start', '<', $end)
-                    ->where('slot_end', '>', $start)
-            )
-            ->exists();
+        return $this->getBookingSlotService()->checkSlotConflict($courtId, $start, $end);
     }
 
-    protected function getPricingService(): PricingRulesService
+    protected function getBookingSlotService(): BookingSlotService
     {
-        return app(PricingRulesService::class);
+        return app(BookingSlotService::class);
+    }
+
+    protected function getPricingService(): PricingRuleService
+    {
+        return app(PricingRuleService::class);
     }
 }

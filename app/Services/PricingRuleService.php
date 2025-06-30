@@ -7,12 +7,17 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
-class PricingRulesService
+class PricingRuleService
 {
     protected static array $cache = [];
     protected static int $cacheSize = 100;
 
-    public function gerPricingRuleForHour(int $courtId, string $date, Carbon $hour): Model
+    public function hasAnyPricingRule(): bool
+    {
+        return PricingRule::get()->isNotEmpty();
+    }
+
+    public function getPricingRuleForHour(int $courtId, string $date, Carbon $hour): Model
     {
         $rules = $this->getCachedRules($courtId, $date);
 
@@ -34,7 +39,7 @@ class PricingRulesService
 
     public function getPriceForHour(int $courtId, string $date, Carbon $hour): float|int
     {
-        return $this->gerPricingRuleForHour($courtId, $date, $hour)->price_per_hour ?? 0;
+        return $this->getPricingRuleForHour($courtId, $date, $hour)->price_per_hour ?? 0;
     }
 
     protected function getCachedRules(int $courtId, string $date): Collection

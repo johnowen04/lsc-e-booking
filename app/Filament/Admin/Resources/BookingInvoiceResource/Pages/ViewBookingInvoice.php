@@ -2,8 +2,11 @@
 
 namespace App\Filament\Admin\Resources\BookingInvoiceResource\Pages;
 
+use App\Actions\Booking\RepaymentBookingFlow;
 use App\Enums\PaymentMethod;
 use App\Filament\Admin\Resources\BookingInvoiceResource;
+use App\Filament\Admin\Pages\Payment\PaymentStatus as AdminPaymentStatus;
+use App\Models\Customer;
 use App\Models\Payment;
 use App\Services\MidtransService;
 use App\Services\PaymentService;
@@ -14,11 +17,17 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Validation\ValidationException;
 
 class ViewBookingInvoice extends ViewRecord
 {
     protected static string $resource = BookingInvoiceResource::class;
+
+    protected RepaymentBookingFlow $repaymentBookingFlow;
+
+    public function boot(RepaymentBookingFlow $repaymentBookingFlow): void
+    {
+        $this->repaymentBookingFlow = $repaymentBookingFlow;
+    }
 
     public function mount($record): void
     {
@@ -35,7 +44,7 @@ class ViewBookingInvoice extends ViewRecord
         if ($redirectUrl) {
             redirect()->away($redirectUrl);
         }
-     }
+    }
 
     public function getHeaderActions(): array
     {
@@ -86,21 +95,16 @@ class ViewBookingInvoice extends ViewRecord
         }
 
         try {
-            $payment = app(PaymentService::class)->createPayment(
-                amount: $data['amount'],
-                invoice: $this->record,
-                overrides: $this->getCreatorInfo(),
+            $payment = $this->repaymentBookingFlow->execute(
+                $data,
+                $this->record,
+                [
+                    'created_by_type' => filament()->auth()->user() ? filament()->auth()->user()::class : null,
+                    'created_by_id' => filament()->auth()->id(),
+                    'callback_class' => AdminPaymentStatus::class,
+                ]
             );
-
-            if (PaymentMethod::from($data['payment_method']) === PaymentMethod::CASH) {
-                $this->handleCashPayment($payment);
-            } elseif (PaymentMethod::from($data['payment_method']) === PaymentMethod::QRIS) {
-                $this->handleQrisPayment($payment);
-            } else {
-                throw ValidationException::withMessages([
-                    'payment_method' => 'Invalid payment method selected.',
-                ]);
-            }
+            redirect(AdminPaymentStatus::getUrl(['order_id' => $payment->uuid]));
         } catch (\Throwable $e) {
             Notification::make()
                 ->title('Failed to record payment.')
@@ -108,68 +112,6 @@ class ViewBookingInvoice extends ViewRecord
                 ->body($e->getMessage())
                 ->send();
         }
-    }
-
-    protected function handleCashPayment(Payment $payment)
-    {
-        app(PaymentService::class)->updatePayment(
-            $payment->uuid,
-            (float) $payment->amount,
-            PaymentMethod::CASH->value,
-            'paid',
-            $this->record,
-            paidAt: now()->toDateTimeString(),
-            overrides: $this->getCreatorInfo()
-        );
-
-        Notification::make()
-            ->title('Payment recorded successfully.')
-            ->success()
-            ->send();
-
-        return redirect(BookingInvoiceResource::getUrl('view', ['record' => $this->record->id]));
-    }
-
-    protected function handleQrisPayment(Payment $payment)
-    {
-        $this->record->load('bookings.court');
-
-        $itemDetails = $this->record->bookings->map(function ($booking) {
-            return [
-                'id' => $booking->id,
-                'price' => (int) round($booking->total_price / 2, -2),
-                'quantity' => 1,
-                'name' => "Repayment Court {$booking->court->name} ({$booking->starts_at->format('H:i')} - {$booking->ends_at->format('H:i')})",
-            ];
-        })->toArray();
-
-        $expectedTotal = array_sum(array_column($itemDetails, 'price'));
-
-        $snapUrl = app(MidtransService::class)->generateSnapUrl(
-            $payment->uuid,
-            $expectedTotal,
-            $this->record->customer_name,
-            $this->record->customer_phone,
-            $itemDetails,
-        );
-
-        Cache::put("snap_admin_{$this->record->id}", $snapUrl, now()->addMinutes(5)); //ttl
-
-        Notification::make()
-            ->title('Redirecting to payment...')
-            ->success()
-            ->send();
-
-        redirect()->away($snapUrl)->send();
-        return;
-    }
-
-    protected function getCreatorInfo(): array
-    {
-        return [
-            'created_by_type' => filament()->auth()->user()::class,
-            'created_by_id' => filament()->auth()->id(),
-        ];
     }
 
     public function hasCombinedRelationManagerTabsWithContent(): bool

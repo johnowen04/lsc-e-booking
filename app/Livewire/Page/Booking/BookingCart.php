@@ -12,7 +12,7 @@ class BookingCart extends Component
 
     public array $groupedSlots = [];
     public int $cartTotal = 0;
-    public string $checkoutURL = '';
+    public string $checkoutUrl = '';
     public bool $showActions = true;
 
     protected function getListeners()
@@ -24,9 +24,9 @@ class BookingCart extends Component
         ];
     }
 
-    public function mount(string $checkoutURL = 'https://google.com', bool $showActions = true)
+    public function mount(string $checkoutUrl = 'https://google.com', bool $showActions = true)
     {
-        $this->checkoutURL = $checkoutURL;
+        $this->checkoutUrl = $checkoutUrl;
         $this->showActions = $showActions;
         $this->refreshCart();
     }
@@ -46,7 +46,7 @@ class BookingCart extends Component
     {
         try {
             $this->checkBookingConflicts();
-            return redirect($this->checkoutURL);
+            return redirect($this->checkoutUrl);
         } catch (\Exception $e) {
             Notification::make()
                 ->title('Booking Conflict')

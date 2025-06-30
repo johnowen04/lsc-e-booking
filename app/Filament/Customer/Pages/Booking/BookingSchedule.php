@@ -10,7 +10,7 @@ class BookingSchedule extends Page
 
     protected static string $view = 'filament.customer.pages.booking.booking-schedule';
 
-    public string $checkoutURL;
+    public string $checkoutUrl;
 
     public static function canAccess(): bool
     {
@@ -19,6 +19,6 @@ class BookingSchedule extends Page
 
     public function mount(): void
     {
-        $this->checkoutURL = BookingCheckout::getUrl();
+        $this->checkoutUrl = BookingCheckout::getUrl();
     }
 }

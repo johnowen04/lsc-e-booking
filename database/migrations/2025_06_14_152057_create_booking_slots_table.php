@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('booking_id')->constrained()->cascadeOnDelete();
             $table->foreignId('court_id')->constrained()->cascadeOnDelete();
+            $table->date('date');
             $table->dateTime('slot_start');
             $table->dateTime('slot_end');
             $table->enum('status', ['held', 'confirmed'])->default('held');

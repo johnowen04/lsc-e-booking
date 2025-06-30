@@ -11,14 +11,16 @@ class BookingScheduleView extends Component
     use InteractsWithBookingCart;
 
     public string $selectedDate;
-    public $isUser = false;
-    public Closure|string $checkoutURL;
+    public $isAdmin = false;
+    public Closure|string $checkoutUrl;
+    public bool $hasAnyPricingRule = false;
 
-    public function mount(bool $isUser = false, Closure|string $checkoutURL = 'https://google.com')
+    public function mount(bool $isAdmin = false, Closure|string $checkoutUrl = 'https://google.com')
     {
-        $this->isUser = $isUser;
-        $this->checkoutURL = $checkoutURL;
+        $this->isAdmin = $isAdmin;
+        $this->checkoutUrl = $checkoutUrl;
         $this->selectedDate = now()->toDateString();
+        $this->hasAnyPricingRule = $this->getPricingService()->hasAnyPricingRule();
     }
 
     public function render()

@@ -2,8 +2,10 @@
 
 namespace App\Filament\Customer\Pages\Booking;
 
-use App\Filament\Customer\Pages\Payment\PaymentStatus;
-use App\Services\BookingService;
+use App\Actions\Booking\CreateBookingFlow;
+use App\Enums\PaymentMethod;
+use App\Filament\Customer\Pages\Payment\PaymentStatus as CustomerPaymentStatus;
+use App\Models\Customer;
 use App\Traits\InteractsWithBookingCart;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\TextInput;
@@ -28,11 +30,11 @@ class BookingCheckout extends Page
     public $cartTotal;
     public ?array $data = [];
 
-    protected BookingService $bookingService;
+    protected CreateBookingFlow $createBookingFlow;
 
-    public function boot(BookingService $bookingService): void
+    public function boot(CreateBookingFlow $createBookingFlow): void
     {
-        $this->bookingService = $bookingService;
+        $this->createBookingFlow = $createBookingFlow;
     }
 
     public function mount(): void
@@ -80,9 +82,23 @@ class BookingCheckout extends Page
     {
         try {
             $this->checkBookingConflicts();
-            $payment = $this->bookingService->createInvoiceWithBookingsForOnline($this->form->getState(), $this->groupedSlots);
+            $data = $this->form->getState();
+            $data['payment_method'] = PaymentMethod::QRIS->value;
+            $customerPhone = $data['customer_phone'];
+            $customer = Customer::where('phone', $customerPhone)->first();
+
+            $payment = $this->createBookingFlow->execute(
+                $data,
+                $this->getGroupedSlots()->toArray(),
+                $customer,
+                [
+                    'created_by_type' => filament()->auth()->user() ? filament()->auth()->user()::class : null,
+                    'created_by_id' => filament()->auth()->id(),
+                    'callback_class' => CustomerPaymentStatus::class,
+                ]
+            );
             $this->clearBookingCart();
-            redirect(PaymentStatus::getUrl(['order_id' => $payment->uuid]));
+            redirect(CustomerPaymentStatus::getUrl(['order_id' => $payment->uuid]));
         } catch (\Throwable $th) {
             Log::error('Booking creation failed', [
                 'error' => $th->getMessage(),

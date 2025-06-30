@@ -2,11 +2,12 @@
 
 namespace App\Filament\Admin\Resources\BookingResource\Pages;
 
+use App\Actions\Booking\CreateBookingFlow;
 use App\Enums\PaymentMethod;
 use App\Filament\Admin\Pages\Booking\BookingSchedule;
-use App\Filament\Admin\Pages\Payment\PaymentStatus;
+use App\Filament\Admin\Pages\Payment\PaymentStatus as AdminPaymentStatus;
 use App\Filament\Admin\Resources\BookingResource;
-use App\Services\BookingService;
+use App\Models\Customer;
 use App\Traits\InteractsWithBookingCart;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
@@ -23,11 +24,11 @@ class CreateBooking extends CreateRecord
     public $groupedSlots;
     public $cartTotal;
 
-    protected BookingService $bookingService;
+    protected CreateBookingFlow $createBookingFlow;
 
-    public function boot(BookingService $bookingService): void
+    public function boot(CreateBookingFlow $createBookingFlow): void
     {
-        $this->bookingService = $bookingService;
+        $this->createBookingFlow = $createBookingFlow;
     }
 
     public function mount(): void
@@ -39,8 +40,8 @@ class CreateBooking extends CreateRecord
     public function getRedirectUrl(): string
     {
         return PaymentMethod::from($this->data['payment_method']) === PaymentMethod::CASH ?
-            PaymentStatus::getUrl(['order_id' => $this->record->uuid, 'status_code' => 200]) :
-            PaymentStatus::getUrl(['order_id' => $this->record->uuid]);
+            AdminPaymentStatus::getUrl(['order_id' => $this->record->uuid, 'status_code' => 200]) :
+            AdminPaymentStatus::getUrl(['order_id' => $this->record->uuid]);
     }
 
     public function getBreadcrumbs(): array
@@ -70,7 +71,19 @@ class CreateBooking extends CreateRecord
     {
         try {
             $this->checkBookingConflicts();
-            $payment = $this->bookingService->createInvoiceWithBookingsForWalkIn($data, $this->groupedSlots);
+            $customerPhone = $data['customer_phone'];
+            $customer = Customer::where('phone', $customerPhone)->first();
+
+            $payment = $this->createBookingFlow->execute(
+                $data,
+                $this->getGroupedSlots()->toArray(),
+                $customer,
+                [
+                    'created_by_type' => filament()->auth()->user() ? filament()->auth()->user()::class : null,
+                    'created_by_id' => filament()->auth()->id(),
+                    'callback_class' => AdminPaymentStatus::class,
+                ]
+            );
             $this->clearBookingCart();
             return $payment;
         } catch (\Throwable $th) {
