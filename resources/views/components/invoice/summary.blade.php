@@ -1,13 +1,11 @@
-<div x-data="qrModal">
-    <link rel="stylesheet" href="{{ asset('css/livewire-component/theme.css') }}">
+@props(['invoice', 'isAdmin' => false, 'redirectUrl'])
 
+<div x-data="qrModal">
     <div class="max-w-4xl mx-auto p-6 bg-white dark:bg-gray-900 shadow-xl rounded-xl space-y-6">
-        <!-- Header -->
         <div class="text-center border-b pb-6">
             <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Booking Invoice</h2>
         </div>
 
-        <!-- Invoice Info -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-700 dark:text-gray-300">
             <div class="flex justify-between items-center">
                 <span class="font-medium text-gray-600 dark:text-gray-400">Status:</span>
@@ -52,7 +50,6 @@
             </div>
         </div>
 
-        <!-- QR Button -->
         <div class="mt-4 text-center">
             <button @click="showQrModal = true"
                 class="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 dark:hover:bg-gray-700">
@@ -112,7 +109,6 @@
             @endif
         @endif
 
-        <!-- Bookings Table -->
         <div>
             <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Bookings</h3>
             <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
@@ -154,28 +150,19 @@
         </div>
 
         <div class="mt-6 flex flex-wrap justify-end gap-3">
-            @if ($isAdmin)
-                <!-- Admin: Go to Admin Panel -->
-                <x-filament::button tag="a"
-                    href="{{ \App\Filament\Admin\Resources\BookingInvoiceResource::getUrl('view', ['record' => $invoice->id]) }}"
-                    color="primary" icon="heroicon-o-arrow-top-right-on-square">
-                    View in Admin Panel
-                </x-filament::button>
-
-                <!-- Admin: Print -->
-                <x-filament::button color="gray" icon="heroicon-o-printer" onclick="window.print()">
-                    Print Invoice
-                </x-filament::button>
-            @else
-                <!-- Customer: Download -->
-                <x-filament::button color="gray" icon="heroicon-o-arrow-down-tray" wire:click="downloadInvoice">
-                    Download Invoice
+            @if ($redirectUrl)
+                <x-filament::button tag="a" href="{{ $redirectUrl }}" color="primary"
+                    icon="heroicon-o-arrow-top-right-on-square">
+                    View Details
                 </x-filament::button>
             @endif
+
+            <x-filament::button color="gray" icon="heroicon-o-printer" onclick="window.print()">
+                Print Invoice
+            </x-filament::button>
         </div>
     </div>
 
-    <!-- QR Modal -->
     <div x-show="showQrModal" x-transition
         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <div @click.outside="showQrModal = false"
@@ -187,24 +174,27 @@
     </div>
 </div>
 
-<!-- JS: QRious + Alpine handler -->
-<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
-<script>
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('qrModal', () => ({
-            showQrModal: false,
-            uuid: @json($invoice->uuid),
-            init() {
-                this.$watch('showQrModal', (value) => {
-                    if (value) {
-                        new QRious({
-                            element: document.getElementById('invoice-qr'),
-                            value: this.uuid,
-                            size: 200,
+@once
+    @push('scripts')
+        <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+        <script>
+            document.addEventListener('alpine:init', () => {
+                Alpine.data('qrModal', () => ({
+                    showQrModal: false,
+                    uuid: @json($invoice->uuid),
+                    init() {
+                        this.$watch('showQrModal', (value) => {
+                            if (value) {
+                                new QRious({
+                                    element: document.getElementById('invoice-qr'),
+                                    value: this.uuid,
+                                    size: 200,
+                                });
+                            }
                         });
-                    }
-                });
-            },
-        }));
-    });
-</script>
+                    },
+                }));
+            });
+        </script>
+    @endpush
+@endonce

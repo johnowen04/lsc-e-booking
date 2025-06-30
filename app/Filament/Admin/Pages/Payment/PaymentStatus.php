@@ -21,17 +21,13 @@ class PaymentStatus extends Page
         $this->orderId = request()->query('order_id');
         $status = request()->query('status_code');
 
-        $this->statusCode = is_numeric($status) ? (int) $status : null;
-
-        if ($this->orderId === null && $this->statusCode === null) {
-            abort(404, 'Order ID not found');
-        }
-
-        if ($this->statusCode === null) {
+        if (!$status) {
             $url = Cache::pull("snap_{$this->orderId}") ?? Cache::pull("cash_{$this->orderId}");
 
             if ($url) redirect()->away($url);
         }
+
+        $this->statusCode = is_numeric($status) ? (int) $status : null;
     }
 
     public function getHeading(): string

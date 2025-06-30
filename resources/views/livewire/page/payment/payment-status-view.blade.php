@@ -17,8 +17,9 @@
             </div>
         </div>
     @elseif ($statusCode >= 200 && $statusCode < 300)
-        <livewire:page.payment.payment-status-success :orderId="$orderId" :statusCode="$statusCode" :isAdmin="$isAdmin" />
+        <x-payment.success :order-id="$orderId" :status-code="$statusCode" :payment="$payment" :invoice="$invoice" :is-admin="$isAdmin"
+            :redirect-url="$redirectUrl" />
     @else
-        <livewire:page.payment.payment-status-error :orderId="$orderId" :statusCode="$statusCode" />
+        <x-payment.failed :order-id="$orderId" :status-code="$statusCode" />
     @endif
 </div>
