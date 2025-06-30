@@ -71,7 +71,7 @@
                     </button>
                 </div>
 
-                <livewire:page.booking.booking-cart :checkoutUrl="$" />
+                <livewire:page.booking.booking-cart :checkoutUrl="$checkoutUrl" />
             </div>
         </div>
     @else
