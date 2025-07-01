@@ -43,10 +43,10 @@ class BookingInvoiceResource extends Resource
                     ->sortable(),
                 TextColumn::make('bookings.booking_number')
                     ->label('Booking Number')
-                    ->limit(20)
-                    ->tooltip(function ($record) {
-                        return $record->bookings->pluck('booking_number')->implode(', ');
-                    })
+                    ->tooltip(fn($record) => $record->bookings->pluck('booking_number')->implode(', '))
+                    ->listWithLineBreaks()
+                    ->bulleted()
+                    ->limitList(2)
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('customer_name')
@@ -57,9 +57,7 @@ class BookingInvoiceResource extends Resource
                     ->label('Created At')
                     ->dateTime('d M Y H:i')
                     ->sortable()
-                    ->tooltip(function ($record) {
-                        return $record->created_at->format('d M Y H:i:s');
-                    }),
+                    ->tooltip(fn($record) => $record->created_at->format('d M Y H:i:s')),
                 TextColumn::make('status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {

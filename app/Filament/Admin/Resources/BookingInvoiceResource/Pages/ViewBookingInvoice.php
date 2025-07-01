@@ -6,10 +6,6 @@ use App\Actions\Booking\RepaymentBookingFlow;
 use App\Enums\PaymentMethod;
 use App\Filament\Admin\Resources\BookingInvoiceResource;
 use App\Filament\Admin\Pages\Payment\PaymentStatus as AdminPaymentStatus;
-use App\Models\Customer;
-use App\Models\Payment;
-use App\Services\MidtransService;
-use App\Services\PaymentService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
@@ -27,23 +23,6 @@ class ViewBookingInvoice extends ViewRecord
     public function boot(RepaymentBookingFlow $repaymentBookingFlow): void
     {
         $this->repaymentBookingFlow = $repaymentBookingFlow;
-    }
-
-    public function mount($record): void
-    {
-        parent::mount($record);
-
-        $snapUrl = Cache::pull("snap_admin_{$this->record->id}");
-
-        if ($snapUrl) {
-            redirect()->away($snapUrl);
-        }
-
-        $redirectUrl = Cache::pull("cash_{$this->record->id}");
-
-        if ($redirectUrl) {
-            redirect()->away($redirectUrl);
-        }
     }
 
     public function getHeaderActions(): array
