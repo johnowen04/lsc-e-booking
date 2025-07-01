@@ -18,7 +18,7 @@ return new class extends Migration
             $table->date('date');
             $table->dateTime('start_at');
             $table->dateTime('end_at');
-            $table->enum('status', ['held', 'confirmed', 'cancelled'])->default('held');
+            $table->enum('status', ['held', 'confirmed', 'attended', 'no_show', 'cancelled'])->default('held');
             $table->decimal('price', 10, 2);
             $table->foreignId('pricing_rule_id')->nullable()->constrained('pricing_rules')->nullOnDelete();
             $table->dateTime('cancelled_at')->nullable();

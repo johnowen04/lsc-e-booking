@@ -24,7 +24,7 @@ return new class extends Migration
             $table->dateTime('starts_at');
             $table->dateTime('ends_at');
             $table->decimal('total_price', 10, 2)->default(0);
-            $table->enum('status', ['held', 'confirmed', 'cancelled'])->default('held');
+            $table->enum('status', ['held', 'confirmed', 'no_show', 'cancelled'])->default('held');
             $table->enum('attendance_status', ['pending', 'attended', 'no_show', 'cancelled'])->default('pending');
             $table->dateTime('must_check_in_before');
             $table->dateTime('checked_in_at')->nullable();
@@ -35,8 +35,6 @@ return new class extends Migration
             $table->unsignedBigInteger('created_by_id')->nullable();
             $table->softDeletes();
             $table->timestamps();
-
-            $table->unique(['court_id', 'starts_at', 'ends_at']);
         });
     }
 

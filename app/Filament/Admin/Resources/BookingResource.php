@@ -114,6 +114,7 @@ class BookingResource extends Resource
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
                         'confirmed' => 'success',
+                        'no_show' => 'warning',
                         'cancelled' => 'danger',
                         default => 'gray',
                     })

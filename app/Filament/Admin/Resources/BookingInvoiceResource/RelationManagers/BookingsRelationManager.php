@@ -76,6 +76,7 @@ class BookingsRelationManager extends RelationManager
                     ->options([
                         'held' => 'Held',
                         'confirmed' => 'Confirmed',
+                        'no_show' => 'No Show',
                         'cancelled' => 'Cancelled',
                     ])
                     ->default('confirmed'),
