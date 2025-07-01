@@ -53,12 +53,31 @@ class MidtransService
         Payment $payment,
         Closure|string|null $itemDetailName = null,
         bool $isPaidInFull,
-        string $callbacFinishUrl,
-        string $callbackErrorUrl
+        string $callbackClass,
     ): void {
         $invoice->load('bookings.court');
 
-        $itemDetails = $invoice->bookings->map(function ($booking) use ($isPaidInFull, $itemDetailName) {
+        $itemDetails = $this->buildItemDetails($invoice, $isPaidInFull, $itemDetailName);
+        $expectedTotal = array_sum(array_column($itemDetails, 'price'));
+
+        [$callbackFinishUrl, $callbackErrorUrl] = $this->generateCallbackUrls($callbackClass, $payment->uuid);
+
+        $snapUrl = $this->generateSnapUrl(
+            $payment->uuid,
+            $expectedTotal,
+            $invoice->customer_name,
+            $invoice->customer_phone,
+            $itemDetails,
+            $callbackFinishUrl,
+            $callbackErrorUrl,
+        );
+
+        Cache::put("snap_{$payment->uuid}", $snapUrl, now()->addMinutes(5));
+    }
+
+    protected function buildItemDetails(Model $invoice, bool $isPaidInFull, Closure|string|null $itemDetailName = null): array
+    {
+        return $invoice->bookings->map(function ($booking) use ($isPaidInFull, $itemDetailName) {
             $price = $isPaidInFull ? $booking->total_price : (int) round($booking->total_price / 2, -2);
 
             $name = match (true) {
@@ -74,20 +93,26 @@ class MidtransService
                 'name' => $name,
             ];
         })->toArray();
+    }
 
-        $expectedTotal = array_sum(array_column($itemDetails, 'price'));
-
-        $snapUrl = $this->generateSnapUrl(
-            $payment->uuid,
-            $expectedTotal,
-            $invoice->customer_name,
-            $invoice->customer_phone,
-            $itemDetails,
-            $callbacFinishUrl,
-            $callbackErrorUrl,
+    protected function generateCallbackUrls(string $callbackClass, string $orderId): array
+    {
+        $finishUrl = $callbackClass::getSignedUrl(
+            parameters: [
+                'order_id' => $orderId,
+                'status_code' => 200,
+                'transaction_status' => 'settlement',
+            ]
         );
 
-        Cache::put("snap_{$payment->uuid}", $snapUrl, now()->addMinutes(5)); //ttl
+        $errorUrl = $callbackClass::getSignedUrl(
+            parameters: [
+                'order_id' => $orderId,
+                'status_code' => 500,
+            ]
+        );
+
+        return [$finishUrl, $errorUrl];
     }
 
     protected function generateSnapUrl(

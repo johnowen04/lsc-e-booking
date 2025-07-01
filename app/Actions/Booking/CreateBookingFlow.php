@@ -79,8 +79,7 @@ class CreateBookingFlow extends AbstractBookingFlow
                     $payment,
                     fn($booking) => "Court {$booking->court->name} ({$booking->starts_at->format('H:i')} - {$booking->ends_at->format('H:i')})",
                     $isPaidInFull,
-                    $callbackClass::getUrl(['order_id' => $payment->uuid]),
-                    $callbackClass::getUrl(['order_id' => $payment->uuid]),
+                    $callbackClass,
                 );
             } else if ($paymentMethod === PaymentMethod::CASH) {
                 $payment = $this->paymentService->updatePayment(
@@ -98,7 +97,7 @@ class CreateBookingFlow extends AbstractBookingFlow
 
                 Cache::put(
                     "cash_{$payment->uuid}",
-                    $callbackClass::getUrl(['order_id' => $payment->uuid]),
+                    $callbackClass::getUrl(['order_id' => $payment->uuid, 'status_code' => 200]),
                     now()->addMinutes(5) //ttl
                 );
             } else {

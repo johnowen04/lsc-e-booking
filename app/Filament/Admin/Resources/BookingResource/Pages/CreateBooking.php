@@ -40,7 +40,7 @@ class CreateBooking extends CreateRecord
     public function getRedirectUrl(): string
     {
         return PaymentMethod::from($this->data['payment_method']) === PaymentMethod::CASH ?
-            AdminPaymentStatus::getUrl(['order_id' => $this->record->uuid, 'status_code' => 200]) :
+            AdminPaymentStatus::getUrl(['order_id' => $this->record->uuid]) :
             AdminPaymentStatus::getUrl(['order_id' => $this->record->uuid]);
     }
 

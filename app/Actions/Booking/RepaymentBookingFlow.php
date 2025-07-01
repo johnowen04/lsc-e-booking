@@ -54,8 +54,7 @@ class RepaymentBookingFlow
                     $payment,
                     fn($booking) => "Repayment Court {$booking->court->name} ({$booking->starts_at->format('H:i')} - {$booking->ends_at->format('H:i')})",
                     false,
-                    $callbackClass::getUrl(['order_id' => $payment->uuid]),
-                    $callbackClass::getUrl(['order_id' => $payment->uuid]),
+                    $callbackClass,
                 );
             } else if ($paymentMethod === PaymentMethod::CASH) {
                 $payment = $this->paymentService->updatePayment(
