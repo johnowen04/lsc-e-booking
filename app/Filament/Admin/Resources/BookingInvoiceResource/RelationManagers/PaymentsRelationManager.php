@@ -45,10 +45,10 @@ class PaymentsRelationManager extends RelationManager
                     ->label('Status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
-                        'pending' => 'gray',
-                        'partially_paid' => 'warning',
                         'paid' => 'success',
+                        'partially_paid' => 'warning',
                         'failed' => 'danger',
+                        default => 'gray',
                     })
                     ->formatStateUsing(fn(string $state): string => Str::headline($state)),
                 TextEntry::make('paid_amount')
@@ -92,10 +92,10 @@ class PaymentsRelationManager extends RelationManager
                     ->label('Status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
-                        'pending' => 'gray',
-                        'partially_paid' => 'warning',
                         'paid' => 'success',
+                        'partially_paid' => 'warning',
                         'failed' => 'danger',
+                        default => 'gray',
                     })
                     ->formatStateUsing(fn(string $state): string => Str::headline($state))
                     ->sortable(),

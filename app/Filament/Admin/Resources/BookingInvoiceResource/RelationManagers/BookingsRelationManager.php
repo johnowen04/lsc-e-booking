@@ -64,10 +64,10 @@ class BookingsRelationManager extends RelationManager
                     ->label('Attendance Status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
-                        'pending' => 'warning',
                         'attended' => 'success',
-                        'no_show' => 'danger',
-                        'cancelled' => 'gray',
+                        'no_show' => 'warning',
+                        'cancelled' => 'danger',
+                        default => 'gray',
                     })
                     ->formatStateUsing(fn(string $state): string => Str::headline($state)),
             ])

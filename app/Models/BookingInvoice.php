@@ -82,8 +82,13 @@ class BookingInvoice extends Model implements PayableInterface
         foreach ($bookings as $booking) {
             $booking->update([
                 'status' => $newBookingStatus,
-                'booking_number' => $booking->generateBookingNumber(),
             ]);
+
+            if ($newBookingStatus === 'confirmed') {
+                $booking->update([
+                    'booking_number' => $booking->generateBookingNumber(),
+                ]);
+            }
 
             $booking->slots()->update([
                 'status' => $newBookingStatus === 'confirmed' ? 'confirmed' : 'held',

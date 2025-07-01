@@ -86,10 +86,10 @@ class BookingResource extends Resource
                     ->label('Attendance Status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
-                        'pending' => 'warning',
                         'attended' => 'success',
-                        'no_show' => 'danger',
-                        'cancelled' => 'gray',
+                        'no_show' => 'warning',
+                        'cancelled' => 'danger',
+                        default => 'gray',
                     })
                     ->formatStateUsing(fn(string $state): string => Str::headline($state)),
             ])
@@ -113,19 +113,19 @@ class BookingResource extends Resource
                 TextEntry::make('status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
-                        'held' => 'gray',
                         'confirmed' => 'success',
                         'cancelled' => 'danger',
+                        default => 'gray',
                     })
                     ->formatStateUsing(fn(string $state): string => Str::ucfirst($state)),
                 TextEntry::make('attendance_status')
                     ->label('Attendance Status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
-                        'pending' => 'warning',
                         'attended' => 'success',
-                        'no_show' => 'danger',
-                        'cancelled' => 'gray',
+                        'no_show' => 'warning',
+                        'cancelled' => 'danger',
+                        default => 'gray',
                     })
                     ->formatStateUsing(fn(string $state): string => Str::headline($state)),
                 TextEntry::make('booking_number')
