@@ -23,6 +23,7 @@ return new class extends Migration
             $table->enum('status', ['unpaid', 'partially_paid', 'paid', 'cancelled'])->default('unpaid');
             $table->dateTime('issued_at');
             $table->dateTime('due_at')->nullable();
+            $table->dateTime('cancelled_at')->nullable();
             $table->string('created_by_type')->nullable();
             $table->unsignedBigInteger('created_by_id')->nullable();
             $table->boolean('is_walk_in')->default(false);

@@ -7,25 +7,28 @@ use App\Models\Scopes\HasStatusScopes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class BookingSlot extends Model
 {
-    use HasFactory, HasStatusScopes, HasDateRangeScopes;
+    use HasFactory, HasStatusScopes, HasDateRangeScopes, SoftDeletes;
 
     protected $fillable = [
         'booking_id',
         'court_id',
         'date',
-        'slot_start',
-        'slot_end',
+        'start_at',
+        'end_at',
+        'status',
         'price',
         'pricing_rule_id',
-        'status',
+        'cancelled_at',
     ];
 
     protected $casts = [
-        'slot_start' => 'datetime',
-        'slot_end' => 'datetime',
+        'start_at' => 'datetime',
+        'end_at' => 'datetime',
+        'cancelled_at' => 'datetime',
     ];
 
     /**

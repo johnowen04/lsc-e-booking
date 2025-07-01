@@ -1,8 +1,11 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+use App\Jobs\CleanupUnpaidBookingInvoices;
+use Illuminate\Console\Scheduling\Schedule;
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+return function (Schedule $schedule) {
+    $schedule->job(CleanupUnpaidBookingInvoices::class)
+        ->everyMinute()
+        ->name('cleanup-unpaid-booking-invoices')
+        ->withoutOverlapping();
+};

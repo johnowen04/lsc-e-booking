@@ -198,8 +198,8 @@ class BookingSlotGrid extends Component
 
         $bookingSlots = BookingSlot::query()
             ->whereIn('court_id', $this->courts->pluck('id'))
-            ->where('slot_start', '<', $end)
-            ->where('slot_end', '>', $start)
+            ->where('start_at', '<', $end)
+            ->where('end_at', '>', $start)
             ->whereIn('status', ['confirmed', 'held'])
             ->get();
 
@@ -216,7 +216,7 @@ class BookingSlotGrid extends Component
             foreach ($this->courts as $court) {
                 $overlappingBooking = $bookingSlots
                     ->where('court_id', $court->id)
-                    ->first(fn($slot) => $slot->slot_start < $slotEnd && $slot->slot_end > $slotStart);
+                    ->first(fn($slot) => $slot->start_at < $slotEnd && $slot->end_at > $slotStart);
 
                 $price = app(PricingRuleService::class)->getPriceForHour($court->id, $this->selectedDate, Carbon::parse($hour . ':00'));
 

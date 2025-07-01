@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\Paymentable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -105,10 +106,16 @@ class PaymentService
 
     public function updateInvoiceStatus(Model $invoice): void
     {
-        $invoice->updatePaymentStatus();
+        Log::info("➡️ Starting updateInvoiceStatus() for Invoice #{$invoice->id}");
 
-        if ($invoice instanceof BookingInvoice) {
-            $invoice->updateBookings();
-        }
+        DB::transaction(function () use ($invoice) {
+            $invoice->updatePaymentStatus();
+
+            if ($invoice instanceof BookingInvoice) {
+                $invoice->updateBookings();
+            }
+        });
+
+        Log::info("✅ Finished updateInvoiceStatus() for Invoice #{$invoice->id}");
     }
 }

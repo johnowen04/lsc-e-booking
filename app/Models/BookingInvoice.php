@@ -29,6 +29,7 @@ class BookingInvoice extends Model implements PayableInterface
         'status',
         'issued_at',
         'due_at',
+        'cancelled_at',
         'created_by_type',
         'created_by_id',
         'is_walk_in',
@@ -38,6 +39,7 @@ class BookingInvoice extends Model implements PayableInterface
         'uuid' => 'string',
         'issued_at' => 'datetime',
         'due_at' => 'datetime',
+        'cancelled_at' => 'datetime',
         'total_amount' => 'decimal:2',
     ];
 
@@ -71,7 +73,17 @@ class BookingInvoice extends Model implements PayableInterface
             default => 'unpaid',
         };
 
-        $this->update(['paid_amount' => $totalPaid, 'status' => $status]);
+        Log::info("💡 Invoice #{$this->id}: computed total paid: {$totalPaid}, new status: {$status}");
+
+        if ($this->paid_amount !== $totalPaid || $this->status !== $status) {
+            $this->paid_amount = $totalPaid;
+            $this->status = $status;
+            $this->save();
+
+            Log::info("✅ Invoice #{$this->id} updated to status '{$this->status}' with paid amount '{$this->paid_amount}'");
+        } else {
+            Log::info("ℹ️ Invoice #{$this->id} already up to date. No changes made.");
+        }
     }
 
     public function updateBookings(): void
@@ -79,25 +91,23 @@ class BookingInvoice extends Model implements PayableInterface
         $bookings = $this->bookings()->get();
         $newBookingStatus = in_array($this->status, ['paid', 'partially_paid']) ? 'confirmed' : 'held';
 
-        foreach ($bookings as $booking) {
-            $booking->update([
-                'status' => $newBookingStatus,
-            ]);
+        Log::info("🔄 Updating bookings for Invoice #{$this->id} to status '{$newBookingStatus}'");
 
-            if ($newBookingStatus === 'confirmed') {
-                $booking->update([
-                    'booking_number' => $booking->generateBookingNumber(),
-                ]);
+        foreach ($bookings as $booking) {
+            $booking->status = $newBookingStatus;
+
+            if ($newBookingStatus === 'confirmed' && !$booking->booking_number) {
+                $booking->booking_number = $booking->generateBookingNumber();
             }
+
+            $booking->save();
 
             $booking->slots()->update([
                 'status' => $newBookingStatus === 'confirmed' ? 'confirmed' : 'held',
             ]);
 
-            $slotStatus = $newBookingStatus === 'confirmed' ? 'confirmed' : 'held';
-
             Log::info("✅ Booking ID {$booking->id} updated to status '{$newBookingStatus}'");
-            Log::info("✅ BookingSlot(s) for booking ID {$booking->id} updated to '{$slotStatus}'");
+            Log::info("✅ BookingSlot(s) for Booking ID {$booking->id} updated to '{$newBookingStatus}'");
         }
     }
 

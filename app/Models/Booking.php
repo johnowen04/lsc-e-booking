@@ -11,15 +11,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class Booking extends Model
 {
-    use HasFactory, HasStatusScopes, HasAttendanceScopes, HasDateRangeScopes;
+    use HasFactory, HasStatusScopes, HasAttendanceScopes, HasDateRangeScopes, SoftDeletes;
 
     protected $fillable = [
         'uuid',
         'booking_number',
+        'booking_invoice_id',
         'customer_id',
         'customer_name',
         'customer_phone',
@@ -28,15 +30,15 @@ class Booking extends Model
         'starts_at',
         'ends_at',
         'total_price',
-        'rescheduled_from_booking_id',
         'status',
         'attendance_status',
         'must_check_in_before',
         'checked_in_at',
+        'cancelled_at',
         'note',
+        'rescheduled_from_booking_id',
         'created_by_type',
         'created_by_id',
-        'booking_invoice_id',
     ];
 
     protected $casts = [
@@ -44,8 +46,9 @@ class Booking extends Model
         'date' => 'date',
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
-        'must_check_in_before' => 'datetime',
         'checked_in_at' => 'datetime',
+        'cancelled_at' => 'datetime',
+        'must_check_in_before' => 'datetime',
     ];
 
     protected static function booted(): void

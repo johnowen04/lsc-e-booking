@@ -16,11 +16,13 @@ return new class extends Migration
             $table->foreignId('booking_id')->constrained()->cascadeOnDelete();
             $table->foreignId('court_id')->constrained()->cascadeOnDelete();
             $table->date('date');
-            $table->dateTime('slot_start');
-            $table->dateTime('slot_end');
-            $table->enum('status', ['held', 'confirmed'])->default('held');
+            $table->dateTime('start_at');
+            $table->dateTime('end_at');
+            $table->enum('status', ['held', 'confirmed', 'cancelled'])->default('held');
             $table->decimal('price', 10, 2);
             $table->foreignId('pricing_rule_id')->nullable()->constrained('pricing_rules')->nullOnDelete();
+            $table->dateTime('cancelled_at')->nullable();
+            $table->softDeletes();
             $table->timestamps();
         });
     }

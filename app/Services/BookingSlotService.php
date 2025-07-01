@@ -19,8 +19,8 @@ class BookingSlotService
             ->whereIn('status', ['confirmed', 'held'])
             ->where(
                 fn($query) =>
-                $query->where('slot_start', '<', $end)
-                    ->where('slot_end', '>', $start)
+                $query->where('start_at', '<', $end)
+                    ->where('end_at', '>', $start)
             )
             ->exists();
     }
@@ -69,8 +69,8 @@ class BookingSlotService
                 'booking_id' => $booking->id,
                 'court_id' => $courtId,
                 'date' => $date,
-                'slot_start' => $startsAt,
-                'slot_end' => $endsAt,
+                'start_at' => $startsAt,
+                'end_at' => $endsAt,
                 'status' => 'held',
                 'price' => $pricingRule->price_per_hour,
                 'pricing_rule_id' => $pricingRule->id,
