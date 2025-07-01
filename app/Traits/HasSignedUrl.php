@@ -9,7 +9,7 @@ trait HasSignedUrl
     public static function getSignedUrl(int $minutes = 30, array $parameters = []): string
     {
         return URL::temporarySignedRoute(
-            static::getRouteName(panel: 'customer'),
+            static::getRouteName(),
             now()->addMinutes($minutes),
             $parameters,
         );

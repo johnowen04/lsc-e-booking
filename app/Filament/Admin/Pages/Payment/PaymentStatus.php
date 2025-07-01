@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Pages\Payment;
 
+use App\Traits\HasSignedUrl;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Cache;
@@ -9,7 +10,8 @@ use Illuminate\Support\Facades\Cache;
 class PaymentStatus extends Page
 {
     use HasPageShield;
-    
+    use HasSignedUrl;
+
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
     protected static string $view = 'filament.admin.pages.payment.payment-status';
@@ -31,6 +33,12 @@ class PaymentStatus extends Page
         }
 
         $this->statusCode = is_numeric($status) ? (int) $status : null;
+
+        if (request()->query('order_id') && request()->query('status_code')) {
+            if (! request()->hasValidSignature()) {
+                abort(403);
+            }
+        }
     }
 
     public function getHeading(): string

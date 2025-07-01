@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 class CreateBooking extends CreateRecord
 {
     use InteractsWithBookingCart;
+    
     protected static string $resource = BookingResource::class;
 
     protected static string $view = 'filament.admin.resources.booking-resource.pages.create-booking';

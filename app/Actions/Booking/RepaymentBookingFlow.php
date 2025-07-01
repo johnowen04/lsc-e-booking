@@ -70,9 +70,16 @@ class RepaymentBookingFlow
                     ],
                 );
 
+                $finishUrl = $callbackClass::getSignedUrl(
+                    parameters: [
+                        'order_id' => $payment->uuid,
+                        'status_code' => 200,
+                    ]
+                );
+
                 Cache::put(
                     "cash_{$payment->uuid}",
-                    $callbackClass::getUrl(['order_id' => $payment->uuid, 'status_code' => 200]),
+                    $finishUrl,
                     now()->addMinutes(5) //ttl
                 );
             } else {
