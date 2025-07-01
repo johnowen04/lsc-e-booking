@@ -12,11 +12,6 @@ class BookingSchedule extends Page
 
     public string $checkoutUrl;
 
-    public static function canAccess(): bool
-    {
-        return true;
-    }
-
     public function mount(): void
     {
         $this->checkoutUrl = BookingCheckout::getUrl();

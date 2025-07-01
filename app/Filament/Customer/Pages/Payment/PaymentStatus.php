@@ -22,7 +22,7 @@ class PaymentStatus extends Page
         $status = request()->query('status_code');
         
         if (!$status) {
-            $url = Cache::pull("snap_{$this->orderId}") ?? Cache::pull("cash_{$this->orderId}");
+            $url = Cache::pull("snap_{$this->orderId}");
 
             if ($url) redirect()->away($url);
         }

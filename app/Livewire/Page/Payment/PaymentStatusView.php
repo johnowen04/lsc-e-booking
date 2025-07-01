@@ -3,6 +3,8 @@
 namespace App\Livewire\Page\Payment;
 
 use App\Filament\Admin\Resources\BookingInvoiceResource;
+use App\Filament\Customer\Pages\Booking\BookingIndex;
+use App\Filament\Customer\Pages\Booking\BookingShow;
 use App\Models\BookingInvoice;
 use App\Models\Payment;
 use Livewire\Component;
@@ -38,9 +40,11 @@ class PaymentStatusView extends Component
             $this->invoice = $this->payment->invoice();
             $this->isAdmin = $isAdmin;
 
-            $this->redirectUrl = $this->isAdmin ?
-                BookingInvoiceResource::getUrl('view', ['record' => $this->invoice->id])
-                : 'https://google.com';
+            if ($this->isAdmin) {
+                $this->redirectUrl = BookingInvoiceResource::getUrl('view', ['record' => $this->invoice->id]);
+            } else {
+                $this->redirectUrl = filament()->auth()->check() ? BookingIndex::getUrl() : null;
+            }
         }
     }
 

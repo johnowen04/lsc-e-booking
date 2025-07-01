@@ -11,6 +11,7 @@ use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Log;
@@ -29,6 +30,7 @@ class BookingCheckout extends Page
     public $groupedSlots;
     public $cartTotal;
     public ?array $data = [];
+    public ?Customer $customer = null;
 
     protected CreateBookingFlow $createBookingFlow;
 
@@ -40,6 +42,7 @@ class BookingCheckout extends Page
     public function mount(): void
     {
         $this->fillFromCart();
+        $this->customer = filament()->auth()?->user();
         $this->form->fill();
     }
 
@@ -61,18 +64,30 @@ class BookingCheckout extends Page
     {
         return $form
             ->schema([
+                Checkbox::make('autofill')
+                    ->label('Autofill')
+                    ->default(fn() => $this->customer !== null)
+                    ->live()
+                    ->hidden(fn() => $this->customer === null),
+
                 TextInput::make('customer_name')
                     ->label('Customer Name')
-                    ->required(),
+                    ->required()
+                    ->default(fn() => $this->customer?->name)
+                    ->disabled(fn(Get $get) => $get('autofill'))
+                    ->dehydrated(),
 
                 TextInput::make('customer_phone')
                     ->label('Phone Number')
                     ->tel()
-                    ->required(),
+                    ->required()
+                    ->default(fn() => $this->customer?->phone)
+                    ->disabled(fn(Get $get) => $get('autofill'))
+                    ->dehydrated(),
 
                 Checkbox::make('is_paid_in_full')
                     ->label('Paid in Full')
-                    ->default(true)
+                    ->default(false)
                     ->live(),
             ])
             ->statePath('data');
