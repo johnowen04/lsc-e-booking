@@ -10,9 +10,10 @@
             <div class="flex justify-between items-center">
                 <span class="font-medium text-gray-600 dark:text-gray-400">Status:</span>
                 <x-filament::badge :color="match ($invoice->status) {
-                    'partially_paid' => 'warning',
+                    'partially_paid' => 'info',
                     'paid' => 'success',
                     'cancelled' => 'danger',
+                    'expired' => 'warning',
                     default => 'gray',
                 }">
                     {{ \Illuminate\Support\Str::headline($invoice->status) }}

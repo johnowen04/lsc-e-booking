@@ -35,6 +35,7 @@ class Booking extends Model
         'must_check_in_before',
         'checked_in_at',
         'cancelled_at',
+        'expired_at',
         'note',
         'rescheduled_from_booking_id',
         'created_by_type',
@@ -48,6 +49,7 @@ class Booking extends Model
         'ends_at' => 'datetime',
         'checked_in_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        'expired_at' => 'datetime',
         'must_check_in_before' => 'datetime',
     ];
 

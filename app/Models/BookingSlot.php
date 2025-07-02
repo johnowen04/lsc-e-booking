@@ -23,12 +23,14 @@ class BookingSlot extends Model
         'price',
         'pricing_rule_id',
         'cancelled_at',
+        'expired_at',
     ];
 
     protected $casts = [
         'start_at' => 'datetime',
         'end_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        'expired_at' => 'datetime',
     ];
 
     /**

@@ -24,11 +24,12 @@ return new class extends Migration
             $table->dateTime('starts_at');
             $table->dateTime('ends_at');
             $table->decimal('total_price', 10, 2)->default(0);
-            $table->enum('status', ['held', 'confirmed', 'no_show', 'cancelled'])->default('held');
-            $table->enum('attendance_status', ['pending', 'attended', 'no_show', 'cancelled'])->default('pending');
+            $table->enum('status', ['held', 'confirmed', 'cancelled', 'expired'])->default('held');
+            $table->enum('attendance_status', ['pending', 'attended', 'no_show'])->default('pending');
             $table->dateTime('must_check_in_before');
             $table->dateTime('checked_in_at')->nullable();
             $table->dateTime('cancelled_at')->nullable();
+            $table->dateTime('expired_at')->nullable();
             $table->text('note')->nullable();
             $table->foreignId('rescheduled_from_booking_id')->nullable()->constrained('bookings')->nullOnDelete();
             $table->string('created_by_type')->nullable();

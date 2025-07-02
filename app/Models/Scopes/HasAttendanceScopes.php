@@ -14,13 +14,18 @@ trait HasAttendanceScopes
         return $query->where('attendance_status', 'no_show');
     }
 
-    public function scopeLate($query)
-    {
-        return $query->where('attendance_status', 'late');
-    }
-
     public function scopePending($query)
     {
         return $query->where('attendance_status', 'pending');
+    }
+
+    public function scopeNotAttended($query)
+    {
+        return $query->where('attendance_status', '!=', 'attended');
+    }
+
+    public function scopeUnattended($query)
+    {
+        return $query->whereIn('attendance_status', ['pending', 'no_show']);
     }
 }

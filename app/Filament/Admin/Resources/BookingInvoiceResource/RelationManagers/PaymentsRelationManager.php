@@ -45,8 +45,8 @@ class PaymentsRelationManager extends RelationManager
                     ->label('Status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
+                        'pending' => 'warning',
                         'paid' => 'success',
-                        'partially_paid' => 'warning',
                         'failed' => 'danger',
                         default => 'gray',
                     })
@@ -92,8 +92,8 @@ class PaymentsRelationManager extends RelationManager
                     ->label('Status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
+                        'pending' => 'warning',
                         'paid' => 'success',
-                        'partially_paid' => 'warning',
                         'failed' => 'danger',
                         default => 'gray',
                     })

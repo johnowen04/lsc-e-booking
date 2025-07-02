@@ -31,11 +31,40 @@ class BookingSlotFactory extends Factory
         ];
     }
 
-    public function cancelled(): self
+    public function confirmed(): static
+    {
+        return $this->state(fn() => [
+            'status' => 'confirmed',
+        ]);
+    }
+
+    public function attended(): static
+    {
+        return $this->state(fn() => [
+            'status' => 'attended',
+        ]);
+    }
+
+    public function noShow(): static
+    {
+        return $this->state(fn() => [
+            'status' => 'no_show',
+        ]);
+    }
+
+    public function cancelled(): static
     {
         return $this->state(fn() => [
             'status' => 'cancelled',
             'cancelled_at' => now(),
+        ]);
+    }
+
+    public function expired(): static
+    {
+        return $this->state(fn() => [
+            'status' => 'expired',
+            'expired_at' => now(),
         ]);
     }
 

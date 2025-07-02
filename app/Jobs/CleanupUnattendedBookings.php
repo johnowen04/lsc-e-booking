@@ -17,7 +17,7 @@ class CleanupUnattendedBookings implements ShouldQueue
 
     public function handle(): void
     {
-        Log::info('🎯 Starting unattended booking cleanup...');
+        Log::info('🧹 Starting unattended booking cleanup...');
 
         Booking::query()
             ->with('slots')
@@ -29,7 +29,6 @@ class CleanupUnattendedBookings implements ShouldQueue
                     DB::transaction(function () use ($booking) {
                         $booking->update([
                             'attendance_status' => 'no_show',
-                            'status' => 'no_show',
                         ]);
 
                         foreach ($booking->slots as $slot) {

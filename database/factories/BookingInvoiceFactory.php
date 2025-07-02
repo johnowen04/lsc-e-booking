@@ -24,7 +24,7 @@ class BookingInvoiceFactory extends Factory
             'customer_name' => $this->faker->name,
             'customer_phone' => $this->faker->phoneNumber,
             'paid_amount' => 0,
-            'total_amount' => $this->faker->randomFloat(2, 100_000, 500_000), // adjust range as needed
+            'total_amount' => $this->faker->randomFloat(2, 100_000, 500_000),
             'status' => 'unpaid',
             'issued_at' => $issuedAt,
             'due_at' => $dueAt,
@@ -37,34 +37,34 @@ class BookingInvoiceFactory extends Factory
 
     public function partiallyPaid(): static
     {
-        return $this->state(function (array $attributes) {
-            $paid = $attributes['total_amount'] / 2;
-
-            return [
-                'paid_amount' => $paid,
-                'status' => 'partially_paid',
-            ];
-        });
+        return $this->state(fn(array $attributes) => [
+            'paid_amount' => $attributes['total_amount'] / 2,
+            'status' => 'paid',
+        ]);
     }
 
     public function fullyPaid(): static
     {
-        return $this->state(function (array $attributes) {
-            return [
-                'paid_amount' => $attributes['total_amount'],
-                'status' => 'paid',
-            ];
-        });
+        return $this->state(fn(array $attributes) => [
+            'paid_amount' => $attributes['total_amount'],
+            'status' => 'paid',
+        ]);
     }
 
     public function cancelled(): static
     {
-        return $this->state(function () {
-            return [
-                'status' => 'cancelled',
-                'cancelled_at' => now(),
-            ];
-        });
+        return $this->state(fn() => [
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
+        ]);
+    }
+
+    public function expired(): static
+    {
+        return $this->state(fn() => [
+            'status' => 'expired',
+            'expired_at' => now(),
+        ]);
     }
 
     public function walkIn(): static

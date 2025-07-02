@@ -34,7 +34,9 @@
 
                             @foreach ($courts as $court)
                                 @php
-                                    $status = $row['slots'][$court->id]['status'];
+                                    $slotData = $row['slots'][$court->id];
+                                    $status = $slotData['status'];
+                                    $isBookable = $slotData['is_bookable'] ?? false;
                                     $inCart = collect($this->getCart())->contains(
                                         fn($slot) => $slot['date'] === $selectedDate &&
                                             $slot['court_id'] === $court->id &&
@@ -48,7 +50,7 @@
                                             $row['hour'] >= $selectedStartHour &&
                                             $row['hour'] <= $hoverHour);
                                     $isEnd = $isInSelection && $row['hour'] === $hoverHour;
-                                    $isDisabled = $status !== 'available' || $inCart;
+                                    $isDisabled = $status !== 'available' || $inCart || !$isBookable;
                                 @endphp
 
                                 <td class="group booking-slot-cell

@@ -53,14 +53,6 @@ class BookingFactory extends Factory
         ]);
     }
 
-    public function noShow(): static
-    {
-        return $this->state(fn() => [
-            'status' => 'no_show',
-            'attendance_status' => 'no_show',
-        ]);
-    }
-
     public function attended(): static
     {
         return $this->state(fn() => [
@@ -70,11 +62,29 @@ class BookingFactory extends Factory
         ]);
     }
 
+    public function noShow(): static
+    {
+        return $this->state(fn() => [
+            'status' => 'confirmed',
+            'attendance_status' => 'no_show',
+        ]);
+    }
+
     public function cancelled(): static
     {
         return $this->state(fn() => [
             'status' => 'cancelled',
-            'attendance_status' => 'cancelled',
+            'attendance_status' => 'pending',
+            'cancelled_at' => now(),
+        ]);
+    }
+
+    public function expired(): static
+    {
+        return $this->state(fn() => [
+            'status' => 'expired',
+            'attendance_status' => 'pending',
+            'expired_at' => now(),
         ]);
     }
 

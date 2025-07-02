@@ -17,39 +17,44 @@ class CleanupUnpaidBookingInvoices implements ShouldQueue
 
     public function handle(): void
     {
-        $expiredInvoices = BookingInvoice::query()
+        Log::info('🧹 Starting cleanup of unpaid booking invoices...');
+
+        BookingInvoice::query()
             ->with('bookings.slots')
             ->where('status', 'unpaid')
             ->where('created_at', '<=', now()->subMinutes(15))
-            ->get();
-
-        foreach ($expiredInvoices as $invoice) {
-            DB::transaction(function () use ($invoice) {
-                $invoice->update([
-                    'status' => 'cancelled',
-                    'cancelled_at' => now(),
-                ]);
-
-                foreach ($invoice->bookings as $booking) {
-                    $booking->update([
-                        'status' => 'cancelled',
-                        'attendance_status' => 'cancelled',
-                        'cancelled_at' => now(),
-                    ]);
-
-                    foreach ($booking->slots as $slot) {
-                        $slot->update([
-                            'status' => 'cancelled',
-                            'cancelled_at' => now(),
+            ->chunkById(50, function ($invoices) {
+                foreach ($invoices as $invoice) {
+                    DB::transaction(function () use ($invoice) {
+                        $invoice->update([
+                            'status' => 'expired',
+                            'expired_at' => now(),
                         ]);
 
-                        $slot->delete();
-                    }
-                }
+                        foreach ($invoice->bookings as $booking) {
+                            $booking->update([
+                                'status' => 'expired',
+                                'attendance_status' => 'pending',
+                                'expired_at' => now(),
+                            ]);
 
-                $booking->delete();
-                Log::info("✅ Released slots, cancelled held booking, & canceled unpaid invoice #{$invoice->id}");
+                            foreach ($booking->slots as $slot) {
+                                $slot->update([
+                                    'status' => 'expired',
+                                    'expired_at' => now(),
+                                ]);
+
+                                $slot->delete();
+                            }
+
+                            $booking->delete();
+                        }
+
+                        Log::info("🕓 Invoice #{$invoice->id} expired. Associated bookings and slots cleaned up.");
+                    });
+                }
             });
-        }
+
+        Log::info('✅ Finished cleanup of unpaid booking invoices.');
     }
 }

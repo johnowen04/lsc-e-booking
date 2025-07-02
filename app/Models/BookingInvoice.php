@@ -30,6 +30,7 @@ class BookingInvoice extends Model implements PayableInterface
         'issued_at',
         'due_at',
         'cancelled_at',
+        'expired_at',
         'created_by_type',
         'created_by_id',
         'is_walk_in',
@@ -40,6 +41,7 @@ class BookingInvoice extends Model implements PayableInterface
         'issued_at' => 'datetime',
         'due_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        'expired_at' => 'datetime',
         'total_amount' => 'decimal:2',
     ];
 

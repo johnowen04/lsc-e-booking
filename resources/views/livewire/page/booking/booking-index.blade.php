@@ -12,6 +12,7 @@
                     $statusClasses = match ($status) {
                         'confirmed' => 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100',
                         'cancelled' => 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-100',
+                        'expired' => 'bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-100',
                         default => 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100',
                     };
                 @endphp

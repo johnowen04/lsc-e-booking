@@ -34,13 +34,13 @@ trait HasStatusScopes
         return $query->where('status', 'cancelled');
     }
 
-    public function scopeDraft($query)
-    {
-        return $query->where('status', 'draft');
-    }
-
     public function scopeHeld($query)
     {
         return $query->where('status', 'held');
+    }
+
+    public function scopeExpired($query)
+    {
+        return $query->where('status', 'expired');
     }
 }

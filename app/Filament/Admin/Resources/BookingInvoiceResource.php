@@ -61,9 +61,10 @@ class BookingInvoiceResource extends Resource
                 TextColumn::make('status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
+                        'partially_paid' => 'info',
                         'paid' => 'success',
-                        'partially_paid' => 'warning',
                         'cancelled' => 'danger',
+                        'expired' => 'warning',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn(string $state): string => Str::headline($state)),
@@ -88,9 +89,10 @@ class BookingInvoiceResource extends Resource
                 TextEntry::make('status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
+                        'partially_paid' => 'info',
                         'paid' => 'success',
-                        'partially_paid' => 'warning',
                         'cancelled' => 'danger',
+                        'expired' => 'warning',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn(string $state): string => Str::headline($state))
