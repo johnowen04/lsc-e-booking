@@ -8,6 +8,7 @@ use App\Services\PricingRuleService;
 use App\Traits\InteractsWithBookingCart;
 use Carbon\Carbon;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Modelable;
 use Livewire\Component;
@@ -28,22 +29,93 @@ class BookingSlotGrid extends Component
     public function mount()
     {
         $this->courts = Court::isActive()->orderBy('name')->get();
-        $this->generateSlots();
+        $this->slots = $this->getCachedSlots();
     }
 
     public function updatedSelectedDate()
+    {
+        $this->slots = $this->getCachedSlots();
+    }
+
+    protected function getCachedSlots()
     {
         $cacheKey = "slots_{$this->selectedDate}";
         $ttl = $this->selectedDate === today()->toDateString()
             ? now()->addSeconds(30)
             : now()->addMinutes(2);
 
-        if (Cache::has($cacheKey)) {
-            $this->slots = Cache::get($cacheKey);
-        } else {
-            $this->generateSlots();
-            Cache::put($cacheKey, $this->slots, $ttl);
-        }
+        return Cache::remember($cacheKey, $ttl, fn() => $this->generateSlotsArray());
+    }
+
+    protected function generateSlotsArray(): Collection
+    {
+        $startHour = 8;
+        $endHour = 22;
+        $start = Carbon::parse("{$this->selectedDate} {$startHour}:00");
+        $end = Carbon::parse("{$this->selectedDate} {$endHour}:00");
+        $bookingCutoff = now()->subHour();
+
+        $courtIds = $this->courts->pluck('id');
+        $bookingSlots = BookingSlot::query()
+            ->whereIn('court_id', $courtIds)
+            ->where('start_at', '<', $end)
+            ->where('end_at', '>', $start)
+            ->whereIn('status', ['confirmed', 'held'])
+            ->get();
+
+        $pricingRules = app(PricingRuleService::class)->getPricesForDate($courtIds, Carbon::parse($this->selectedDate));
+
+        return collect(range($startHour, $endHour - 1))->map(function ($hour) use (
+            $bookingSlots,
+            $bookingCutoff,
+            $pricingRules
+        ) {
+            $slotStart = Carbon::parse("{$this->selectedDate} {$hour}:00");
+            $slotEnd = $slotStart->copy()->addHour();
+
+            return [
+                'time' => "{$slotStart->format('H:i')} - {$slotEnd->format('H:i')}",
+                'hour' => $hour,
+                'slots' => $this->generateCourtSlots($slotStart, $slotEnd, $bookingSlots, $bookingCutoff, $pricingRules),
+            ];
+        })->values();
+    }
+
+    protected function generateCourtSlots(
+        Carbon $slotStart,
+        Carbon $slotEnd,
+        $bookingSlots,
+        Carbon $bookingCutoff,
+        $pricingRules
+    ): array {
+        $hour = (int) $slotStart->format('H');
+
+        return $this->courts->mapWithKeys(function ($court) use (
+            $slotStart,
+            $slotEnd,
+            $bookingSlots,
+            $bookingCutoff,
+            $pricingRules,
+            $hour
+        ) {
+            $overlapping = $bookingSlots
+                ->where('court_id', $court->id)
+                ->first(fn($slot) => $slot->start_at < $slotEnd && $slot->end_at > $slotStart);
+
+            $status = match ($overlapping->status ?? null) {
+                'confirmed' => 'booked',
+                'held' => 'held',
+                default => 'available',
+            };
+
+            $price = $pricingRules[$court->id][$hour]->price ?? 0;
+
+            return [$court->id => [
+                'price' => $price,
+                'status' => $status,
+                'is_bookable' => $status === 'available' && $slotStart->greaterThanOrEqualTo($bookingCutoff),
+            ]];
+        })->toArray();
     }
 
     public function setHoverHour($hour)
@@ -186,56 +258,6 @@ class BookingSlotGrid extends Component
     {
         Notification::make()->title($message)->warning()->send();
         $this->resetSelection();
-    }
-
-    public function generateSlots()
-    {
-        $startHour = 8;
-        $endHour = 22;
-
-        $start = Carbon::parse("{$this->selectedDate} {$startHour}:00");
-        $end = Carbon::parse("{$this->selectedDate} {$endHour}:00");
-        $minimumBooking = now()->subHours(1);
-
-        $bookingSlots = BookingSlot::query()
-            ->whereIn('court_id', $this->courts->pluck('id'))
-            ->where('start_at', '<', $end)
-            ->where('end_at', '>', $start)
-            ->whereIn('status', ['confirmed', 'held'])
-            ->get();
-
-        $this->slots = collect(range($startHour, $endHour - 1))->map(function ($hour) use ($bookingSlots, $minimumBooking) {
-            $slotStart = Carbon::parse("{$this->selectedDate} {$hour}:00");
-            $slotEnd = $slotStart->copy()->addHour();
-
-            $row = [
-                'time' => "{$slotStart->format('H:i')} - {$slotEnd->format('H:i')}",
-                'slots' => [],
-                'hour' => $hour,
-            ];
-
-            foreach ($this->courts as $court) {
-                $overlappingBooking = $bookingSlots
-                    ->where('court_id', $court->id)
-                    ->first(fn($slot) => $slot->start_at < $slotEnd && $slot->end_at > $slotStart);
-
-                $price = app(PricingRuleService::class)->getPriceForHour($court->id, $this->selectedDate, Carbon::parse($hour . ':00'));
-
-                $status = match ($overlappingBooking->status ?? null) {
-                    'confirmed' => 'booked',
-                    'held' => 'held',
-                    default => 'available',
-                };
-
-                $row['slots'][$court->id] = [
-                    'price' => $price,
-                    'status' => $status,
-                    'is_bookable' => $status === 'available' && $slotStart->greaterThanOrEqualTo($minimumBooking),
-                ];
-            }
-
-            return $row;
-        })->values();
     }
 
     public function render()
