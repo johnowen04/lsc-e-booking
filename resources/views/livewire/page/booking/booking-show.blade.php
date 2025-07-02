@@ -23,7 +23,7 @@
 
         @php
             $status = strtolower($booking->status);
-            $paymentStatus = strtolower($booking->invoice->status ?? 'unpaid');
+            $invoiceStatus = strtolower($booking->invoice->status ?? 'unpaid');
             $attendanceStatus = strtolower($booking->attendance_status ?? 'unpaid');
 
             $statusClasses = match ($status) {
@@ -33,10 +33,11 @@
                 default => 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100',
             };
 
-            $paymentClasses = match ($paymentStatus) {
-                'pending' => 'bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-100',
+            $invoiceClasses = match ($invoiceStatus) {
+                'partially_paid' => 'bg-info-100 dark:bg-info-800 text-info-800 dark:text-info-100',
                 'paid' => 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100',
-                'failed' => 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-100',
+                'cancelled' => 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-100',
+                'expired' => 'bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-100',
                 default => 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100',
             };
 
@@ -59,7 +60,7 @@
         <div>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Payment</dt>
             <dd class="mt-1">
-                <span class="inline-block px-2 py-0.5 rounded text-xs font-medium {{ $paymentClasses }}">
+                <span class="inline-block px-2 py-0.5 rounded text-xs font-medium {{ $invoiceClasses }}">
                     {{ \Illuminate\Support\Str::headline($booking->invoice->status ?? 'Unpaid') }}
                 </span>
             </dd>
