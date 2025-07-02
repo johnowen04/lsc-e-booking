@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use App\Models\Scopes\HasIsActiveScopes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Court extends Model
 {
-    use HasIsActiveScopes;
+    use HasFactory, HasIsActiveScopes;
     
     protected $fillable = [
         'name',

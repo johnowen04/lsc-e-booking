@@ -22,8 +22,8 @@ class PricingRuleService
         $rules = $this->getCachedRules($courtId, $date);
 
         $rule = $rules->first(function ($rule) use ($hour) {
-            $start = $rule->time_start;
-            $end = $rule->time_end;
+            $start = Carbon::createFromTimeString($rule->time_start)->format('H:i:s');
+            $end = Carbon::createFromTimeString($rule->time_end)->format('H:i:s');
 
             if ($start === '00:00:00' && $end === '00:00:00') {
                 return true;
@@ -33,6 +33,12 @@ class PricingRuleService
                 ? ($hour >= $start && $hour < $end)
                 : ($hour >= $start || $hour < $end);
         });
+
+        if (!$rule) {
+            throw new \RuntimeException(
+                "❌ No pricing rule matched for court_id={$courtId}, date={$date}, hour={$hour->toTimeString()}"
+            );
+        }
 
         return $rule;
     }
