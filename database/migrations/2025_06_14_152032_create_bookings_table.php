@@ -28,7 +28,7 @@ return new class extends Migration
             $table->enum('status', ['held', 'confirmed', 'cancelled', 'expired'])->default('held');
             $table->enum('attendance_status', ['pending', 'attended', 'no_show'])->default('pending');
             $table->dateTime('must_check_in_before');
-            $table->dateTime('checked_in_at')->nullable();
+            $table->dateTime('attended_at')->nullable();
             $table->dateTime('cancelled_at')->nullable();
             $table->dateTime('expired_at')->nullable();
             $table->text('note')->nullable();

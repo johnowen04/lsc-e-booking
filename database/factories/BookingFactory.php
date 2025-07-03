@@ -37,8 +37,9 @@ class BookingFactory extends Factory
             'total_price' => $this->faker->randomFloat(2, 50, 200),
             'status' => 'held',
             'attendance_status' => 'pending',
-            'checked_in_at' => null,
+            'attended_at' => null,
             'cancelled_at' => null,
+            'expired_at' => null,
             'note' => null,
             'rescheduled_from_booking_id' => null,
             'created_by_type' => null,
@@ -59,7 +60,7 @@ class BookingFactory extends Factory
         return $this->state(fn() => [
             'status' => 'confirmed',
             'attendance_status' => 'attended',
-            'checked_in_at' => now(),
+            'attended_at' => now(),
         ]);
     }
 

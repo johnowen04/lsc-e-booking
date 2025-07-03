@@ -21,6 +21,7 @@ return new class extends Migration
             $table->enum('status', ['held', 'confirmed', 'attended', 'no_show', 'cancelled', 'expired'])->default('held');
             $table->decimal('price', 10, 2);
             $table->foreignId('pricing_rule_id')->nullable()->constrained('pricing_rules')->nullOnDelete();
+            $table->dateTime('attended_at')->nullable();
             $table->dateTime('cancelled_at')->nullable();
             $table->dateTime('expired_at')->nullable();
             $table->softDeletes();

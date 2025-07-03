@@ -31,21 +31,21 @@ class CleanupUnattendedBookingsTest extends TestCase
             ...$this->hourSlot('2025-07-02 08:00'),
             'status' => 'confirmed',
             'attendance_status' => 'pending',
-            'checked_in_at' => null,
+            'attended_at' => null,
         ]);
 
         $notYetDue = Booking::factory()->create([
             ...$this->hourSlot('2025-07-02 09:00'),
             'status' => 'confirmed',
             'attendance_status' => 'pending',
-            'checked_in_at' => null,
+            'attended_at' => null,
         ]);
 
         $alreadyCheckedIn = Booking::factory()->create([
             ...$this->hourSlot('2025-07-02 08:00'),
             'status' => 'confirmed',
             'attendance_status' => 'attended',
-            'checked_in_at' => now()->subMinutes(10),
+            'attended_at' => now()->subMinutes(10),
         ]);
 
         $alreadyNoShow     = Booking::factory()->noShow()->create($this->hourSlot('2025-07-02 07:00'));

@@ -34,7 +34,7 @@ class Booking extends Model
         'status',
         'attendance_status',
         'must_check_in_before',
-        'checked_in_at',
+        'attended_at',
         'cancelled_at',
         'expired_at',
         'note',
@@ -48,7 +48,7 @@ class Booking extends Model
         'date' => 'date',
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
-        'checked_in_at' => 'datetime',
+        'attended_at' => 'datetime',
         'cancelled_at' => 'datetime',
         'expired_at' => 'datetime',
         'must_check_in_before' => 'datetime',
@@ -84,7 +84,7 @@ class Booking extends Model
 
         if ($this->invoice->status === 'paid') {
             $this->attendance_status = 'attended';
-            $this->checked_in_at = now();
+            $this->attended_at = now();
             $this->save();
 
             return true;
