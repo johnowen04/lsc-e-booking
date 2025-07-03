@@ -27,6 +27,7 @@ class BookingFactory extends Factory
             'booking_invoice_id' => BookingInvoice::factory(),
             'customer_id' => Customer::factory(),
             'customer_name' => $this->faker->name,
+            'customer_email' => $this->faker->email,
             'customer_phone' => $this->faker->phoneNumber,
             'court_id' => Court::factory(),
             'date' => $startsAt->toDateString(),

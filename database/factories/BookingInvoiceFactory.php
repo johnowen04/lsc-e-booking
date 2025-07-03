@@ -22,6 +22,7 @@ class BookingInvoiceFactory extends Factory
             'invoice_number' => 'INV-' . strtoupper(Str::random(8)),
             'customer_id' => Customer::factory(),
             'customer_name' => $this->faker->name,
+            'customer_email' => $this->faker->email,
             'customer_phone' => $this->faker->phoneNumber,
             'paid_amount' => 0,
             'total_amount' => $this->faker->randomFloat(2, 100_000, 500_000),

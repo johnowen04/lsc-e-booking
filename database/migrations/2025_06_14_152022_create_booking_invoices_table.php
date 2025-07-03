@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('invoice_number')->unique();
             $table->foreignId('customer_id')->nullable()->constrained('customers')->nullOnDelete();
             $table->string('customer_name')->nullable();
+            $table->string('customer_email')->nullable();
             $table->string('customer_phone')->nullable();
             $table->decimal('paid_amount', 10, 2)->default(0);
             $table->decimal('total_amount', 10, 2)->default(0);

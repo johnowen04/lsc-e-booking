@@ -35,10 +35,16 @@ class BookingResource extends Resource
                     ->label('Customer Name')
                     ->required(),
 
-                TextInput::make('customer_phone')
-                    ->label('Phone Number')
-                    ->tel()
-                    ->required(),
+                TextInput::make('customer_email')
+                    ->label('Customer Email')
+                    ->email()
+                    ->required()
+                    ->dehydrated(),
+
+                // TextInput::make('customer_phone')
+                //     ->label('Phone Number')
+                //     ->tel()
+                //     ->required(),
 
                 Select::make('payment_method')
                     ->label('Payment Method')
@@ -62,26 +68,32 @@ class BookingResource extends Resource
                     ->label('Booking Number')
                     ->searchable()
                     ->sortable(),
+
                 TextColumn::make('court.name')
                     ->label('Court')
                     ->searchable()
                     ->sortable(),
+
                 TextColumn::make('date')
                     ->label('Date')
                     ->date('d M Y')
                     ->sortable(),
+
                 TextColumn::make('starts_at')
                     ->label('Start At')
                     ->dateTime('H:i')
                     ->sortable(),
+
                 TextColumn::make('ends_at')
                     ->label('End At')
                     ->dateTime('H:i')
                     ->sortable(),
+
                 TextColumn::make('customer_name')
                     ->label('Customer Name')
                     ->searchable()
                     ->sortable(),
+
                 TextColumn::make('attendance_status')
                     ->label('Attendance Status')
                     ->badge()
@@ -118,6 +130,7 @@ class BookingResource extends Resource
                         default => 'gray',
                     })
                     ->formatStateUsing(fn(string $state): string => Str::ucfirst($state)),
+
                 TextEntry::make('attendance_status')
                     ->label('Attendance Status')
                     ->badge()
@@ -127,6 +140,7 @@ class BookingResource extends Resource
                         default => 'info',
                     })
                     ->formatStateUsing(fn(string $state): string => Str::headline($state)),
+
                 TextEntry::make('booking_number')
                     ->label('Booking Number'),
                 TextEntry::make('booking_invoice_id')
@@ -136,27 +150,39 @@ class BookingResource extends Resource
                     ->color('primary')
                     ->url(fn(Booking $record) => BookingInvoiceResource::getUrl('view', ['record' => $record->booking_invoice_id]))
                     ->openUrlInNewTab(),
+
                 TextEntry::make(name: 'customer_name')
                     ->label('Customer Name'),
-                TextEntry::make('customer_phone')
-                    ->label('Phone Number'),
+
+                TextEntry::make('customer_email')
+                    ->label('Email'),
+
+                // TextEntry::make('customer_phone')
+                //     ->label('Phone Number'),
+
                 TextEntry::make('court.name')
                     ->label('Court'),
+
                 TextEntry::make('date')
                     ->label('Date')
                     ->date('d M Y'),
+
                 TextEntry::make('starts_at')
                     ->label('Start At')
                     ->dateTime('H:i'),
+
                 TextEntry::make('ends_at')
                     ->label('End At')
                     ->dateTime('H:i'),
+
                 TextEntry::make('total_price')
                     ->label('Total Price')
                     ->money('IDR')
                     ->columnSpanFull(),
+
                 TextEntry::make('createdBy.name')
                     ->label('Created By'),
+
                 TextEntry::make('created_at')
                     ->label('Created At')
                     ->since()

@@ -16,7 +16,6 @@ class TestDatabaseSeeder extends Seeder
         $courtA = Court::factory()->create(['name' => 'Court A']);
         $courtB = Court::factory()->create(['name' => 'Court B']);
 
-        // Global Rule: Regular pricing for all courts, all days
         PricingRule::factory()->forAllCourts()->forAllDays()->create([
             'name' => 'All Day Regular',
             'description' => 'Applies to all courts and all days',
@@ -28,7 +27,6 @@ class TestDatabaseSeeder extends Seeder
             'created_by' => $adminUser->id,
         ]);
 
-        // Global Rule: Peak pricing every day for all courts
         PricingRule::factory()->forAllCourts()->forAllDays()->create([
             'name' => 'All Day Peak',
             'description' => 'Peak hours for all courts and all days',
@@ -40,10 +38,9 @@ class TestDatabaseSeeder extends Seeder
             'created_by' => $adminUser->id,
         ]);
 
-        // Promo rule: applies to all courts, specific date range
         PricingRule::factory()->forAllCourts()->forAllDays()->promoForRange(
-            now()->startOfWeek()->addDays(1)->toDateString(),  // Tuesday
-            now()->startOfWeek()->addDays(5)->toDateString()   // Saturday
+            now()->startOfWeek()->addDays(1)->toDateString(),
+            now()->startOfWeek()->addDays(5)->toDateString()
         )->create([
             'name' => 'Promo Week',
             'description' => '50% discount this week only!',
@@ -54,12 +51,11 @@ class TestDatabaseSeeder extends Seeder
             'created_by' => $adminUser->id,
         ]);
 
-        // Custom rule: for Court A only, all day Sunday
         PricingRule::factory()->create([
             'name' => 'Court A Sunday Special',
             'description' => 'Court A is discounted every Sunday',
             'court_id' => $courtA->id,
-            'day_of_week' => 0, // Sunday
+            'day_of_week' => 0,
             'time_start' => '08:00:00',
             'time_end' => '22:00:00',
             'price_per_hour' => 80000,

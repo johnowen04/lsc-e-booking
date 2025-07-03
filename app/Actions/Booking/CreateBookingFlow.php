@@ -2,17 +2,19 @@
 
 namespace App\Actions\Booking;
 
-use App\Enums\PaymentMethod;
-use App\Models\Customer;
+use App\DTOs\Payment\CreatePaymentData;
+use App\DTOs\Shared\CreatedByData;
+use App\DTOs\Shared\CustomerInfoData;
+use App\DTOs\Shared\InvoiceReference;
+use App\DTOs\Shared\MoneyData;
 use App\Models\Payment;
+use App\Processors\Payment\PaymentProcessor;
 use App\Services\BookingService;
 use App\Services\BookingSlotService;
 use App\Services\InvoiceService;
-use App\Services\PaymentService;
-use App\Services\MidtransService;
-use Illuminate\Support\Facades\Cache;
+use App\Services\PricingRuleService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class CreateBookingFlow extends AbstractBookingFlow
 {
@@ -20,98 +22,67 @@ class CreateBookingFlow extends AbstractBookingFlow
         BookingService $bookingService,
         BookingSlotService $bookingSlotService,
         InvoiceService $invoiceService,
-        PaymentService $paymentService,
-        protected MidtransService $midtransService,
+        PricingRuleService $pricingRuleService,
+        PaymentProcessor $paymentProcessor,
     ) {
-        parent::__construct($bookingService, $bookingSlotService, $invoiceService, $paymentService);
+        parent::__construct($bookingService, $bookingSlotService, $invoiceService, $pricingRuleService, $paymentProcessor);
     }
 
-    public function execute(array $formData, array $groupedSlots, ?Customer $customer = null, ?array $options = null): Payment
+    public function execute(array $formData, Collection $groupedSlots, ?array $options = null): Payment
     {
-        $createdByType = $options['created_by_type'];
-        $createdById = $options['created_by_id'];
+        $customerDto = CustomerInfoData::fromArray($formData);
+        $createdByDto = CreatedByData::fromModel($options['creator']);
+        $paymentMethod = $formData['payment_method'];
+        $isPaidInFull = $formData['is_paid_in_full'];
+        $isWalkIn = $options['is_walk_in'];
         $callbackClass = $options['callback_class'];
 
         return DB::transaction(function () use (
-            $formData,
             $groupedSlots,
-            $customer,
-            $createdByType,
-            $createdById,
-            $callbackClass,
+            $customerDto,
+            $createdByDto,
+            $paymentMethod,
+            $isPaidInFull,
+            $isWalkIn,
+            $callbackClass
         ) {
-            $isPaidInFull = $formData['is_paid_in_full'];
-            $paymentMethod = PaymentMethod::from($formData['payment_method']);
-
             $invoice = $this->createInvoice(
-                $formData,
-                $customer,
-                [
-                    'created_by_type' => $createdByType,
-                    'created_by_id' => $createdById
-                ]
+                $customerDto,
+                new MoneyData(
+                    total: 0.0,
+                ),
+                'unpaid',
+                $isWalkIn,
+                $createdByDto
             );
 
-            $invoice = $this->createBookings(
+            $bookings = $this->createBookings(
                 $groupedSlots,
                 $invoice,
-                [
-                    'customer_id' => $customer?->id,
-                    'customer_name' => $formData['customer_name'],
-                    'customer_phone' => $formData['customer_phone'],
-                    'created_by_type' => $createdByType,
-                    'created_by_id' => $createdById
-                ]
+                $customerDto,
+                $createdByDto
             );
 
-            $payment = $this->paymentService->createPayment(
-                $isPaidInFull ? $invoice->total_amount : (int) round($invoice->total_amount / 2, -2),
-                $invoice,
-                [
-                    'created_by_type' => $createdByType,
-                    'created_by_id' => $createdById
-                ]
+            $invoice->update(['total_amount' => collect($bookings)->sum('total_price')]);
+
+            $initialPaymentDto = new CreatePaymentData(
+                new MoneyData(
+                    total: $isPaidInFull ? $invoice->total_amount : round($invoice->total_amount / 2, -2),
+                    paid: $isPaidInFull ? $invoice->total_amount : round($invoice->total_amount / 2, -2),
+                ),
+                $paymentMethod,
+                $createdByDto,
+                new InvoiceReference(
+                    type: get_class($invoice),
+                    id: $invoice->id,
+                )
             );
 
-            if ($paymentMethod === PaymentMethod::QRIS) {
-                $this->midtransService->prepareSnapTransaction(
-                    $invoice,
-                    $payment,
-                    fn($booking) => "Court {$booking->court->name} ({$booking->starts_at->format('H:i')} - {$booking->ends_at->format('H:i')})",
-                    $isPaidInFull,
-                    $callbackClass,
-                );
-            } else if ($paymentMethod === PaymentMethod::CASH) {
-                $payment = $this->paymentService->updatePayment(
-                    $payment->uuid,
-                    (float) $payment->amount,
-                    PaymentMethod::CASH->value,
-                    'paid',
-                    $invoice,
-                    paidAt: now()->toDateTimeString(),
-                    overrides: [
-                        'created_by_type' => $createdByType,
-                        'created_by_id' => $createdById
-                    ],
-                );
-
-                $finishUrl = $callbackClass::getSignedUrl(
-                    parameters: [
-                        'order_id' => $payment->uuid,
-                        'status_code' => 200,
-                    ]
-                );
-
-                Cache::put(
-                    "cash_{$payment->uuid}",
-                    $finishUrl,
-                    now()->addMinutes(5) //ttl
-                );
-            } else {
-                throw ValidationException::withMessages(['payment_method' => 'Invalid payment method selected.']);
-            }
-
-            return $payment;
+            return $this->createPayment(
+                $initialPaymentDto,
+                fn($booking) => "Court {$booking->court->name} ({$booking->starts_at->format('H:i')} - {$booking->ends_at->format('H:i')})",
+                $callbackClass
+            );
         });
     }
 }

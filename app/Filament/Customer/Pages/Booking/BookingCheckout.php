@@ -77,13 +77,21 @@ class BookingCheckout extends Page
                     ->disabled(fn(Get $get) => $get('autofill'))
                     ->dehydrated(),
 
-                TextInput::make('customer_phone')
-                    ->label('Phone Number')
-                    ->tel()
+                TextInput::make('customer_email')
+                    ->label('Customer Email')
+                    ->email()
                     ->required()
-                    ->default(fn() => $this->customer?->phone)
+                    ->default(fn() => $this->customer?->email)
                     ->disabled(fn(Get $get) => $get('autofill'))
                     ->dehydrated(),
+
+                // TextInput::make('customer_phone')
+                //     ->label('Phone Number')
+                //     ->tel()
+                //     ->required()
+                //     ->default(fn() => $this->customer?->phone)
+                //     ->disabled(fn(Get $get) => $get('autofill'))
+                //     ->dehydrated(),
 
                 Checkbox::make('is_paid_in_full')
                     ->label('Paid in Full')
@@ -99,19 +107,17 @@ class BookingCheckout extends Page
             $this->checkBookingConflicts();
             $data = $this->form->getState();
             $data['payment_method'] = PaymentMethod::QRIS->value;
-            $customerPhone = $data['customer_phone'];
-            $customer = Customer::where('phone', $customerPhone)->first();
 
             $payment = $this->createBookingFlow->execute(
                 $data,
-                $this->getGroupedSlots()->toArray(),
-                $customer,
+                $this->getGroupedSlots(),
                 [
-                    'created_by_type' => filament()->auth()->user() ? filament()->auth()->user()::class : null,
-                    'created_by_id' => filament()->auth()->id(),
+                    'creator' => filament()->auth()->user(),
+                    'is_walk_in' => false,
                     'callback_class' => CustomerPaymentStatus::class,
                 ]
             );
+            
             $this->clearBookingCart();
             redirect(CustomerPaymentStatus::getUrl(['order_id' => $payment->uuid]));
         } catch (\Throwable $th) {

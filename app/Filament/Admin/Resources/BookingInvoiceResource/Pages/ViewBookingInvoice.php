@@ -12,7 +12,6 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
-use Illuminate\Support\Facades\Cache;
 
 class ViewBookingInvoice extends ViewRecord
 {
@@ -78,11 +77,11 @@ class ViewBookingInvoice extends ViewRecord
                 $data,
                 $this->record,
                 [
-                    'created_by_type' => filament()->auth()->user() ? filament()->auth()->user()::class : null,
-                    'created_by_id' => filament()->auth()->id(),
+                    'creator' => filament()->auth()->user(),
                     'callback_class' => AdminPaymentStatus::class,
                 ]
             );
+            
             redirect(AdminPaymentStatus::getUrl(['order_id' => $payment->uuid]));
         } catch (\Throwable $e) {
             Notification::make()

@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\DTOs\Payment\CreatePaymentData;
+use App\DTOs\Payment\UpdatePaymentData;
 use App\Models\BookingInvoice;
 use App\Models\Payment;
 use App\Models\Paymentable;
@@ -13,92 +15,68 @@ use Illuminate\Validation\ValidationException;
 
 class PaymentService
 {
-    public function createPayment(
-        float $amount,
-        Model $invoice,
-        ?array $overrides = [],
-    ): Payment {
-        if ($amount <= 0) {
+    public function createPayment(CreatePaymentData $data): Payment
+    {
+        if ($data->amounts->total <= 0) {
             throw ValidationException::withMessages([
                 'amount' => 'Payment amount must be greater than zero.',
             ]);
         }
 
-        return DB::transaction(function () use ($amount, $invoice, $overrides) {
-            $payment = Payment::create(array_merge([
-                'uuid'        => Str::uuid(),
-                'amount'      => $amount,
-            ], $overrides));
+        return DB::transaction(function () use ($data) {
+            $payment = Payment::create([
+                'uuid' => Str::uuid(),
+                'amount' => $data->amounts->total,
+            ]);
 
             Paymentable::updateOrCreate([
-                'payment_id'       => $payment->id,
-                'paymentable_type' => $invoice::class,
-                'paymentable_id'   => $invoice->id,
+                'payment_id' => $payment->id,
+                'paymentable_type' => $data->invoice->type,
+                'paymentable_id' => $data->invoice->id,
             ]);
 
             return $payment;
         });
     }
 
-    public function updatePayment(
-        string $orderId,
-        float $paidAmount,
-        string $paymentMethod,
-        string $status,
-        Model $invoice,
-        ?string $referenceCode = null,
-        ?string $providerName = null,
-        ?string $notes = null,
-        ?string $paidAt = null,
-        ?string $expiresAt = null,
-        ?array $overrides = [],
-    ): Payment {
-        if ($orderId === '') {
+    public function updatePayment(UpdatePaymentData $data): Payment
+    {
+        if ($data->orderId === '') {
             throw ValidationException::withMessages([
                 'order_id' => 'Order ID cannot be empty.',
             ]);
         }
 
-        if ($paidAmount < 0) {
+        if ($data->amounts->paid < 0) {
             throw ValidationException::withMessages([
                 'paid_amount' => 'Paid amount must be greater than or equals to zero.',
             ]);
         }
 
-        return DB::transaction(function () use (
-            $orderId,
-            $paidAmount,
-            $paymentMethod,
-            $status,
-            $invoice,
-            $referenceCode,
-            $providerName,
-            $notes,
-            $paidAt,
-            $expiresAt,
-            $overrides,
-        ) {
+        return DB::transaction(function () use ($data) {
             $payment = Payment::updateOrCreate(
-                ['uuid' => $orderId],
-                array_merge([
-                    'paid_amount'    => $paidAmount,
-                    'method'         => $paymentMethod,
-                    'status'         => $status,
-                    'reference_code' => $referenceCode,
-                    'provider_name'  => $providerName,
-                    'notes'          => $notes,
-                    'paid_at'        => $paidAt,
-                    'expires_at'     => $expiresAt,
-                ], $overrides)
+                ['uuid' => $data->orderId],
+                [
+                    'paid_amount' => $data->amounts->paid,
+                    'method' => $data->method,
+                    'status' => $data->status,
+                    'reference_code' => $data->referenceCode,
+                    'provider_name' => $data->providerName,
+                    'notes' => $data->notes,
+                    'paid_at' => $data->paidAt,
+                    'expires_at' => $data->expiresAt,
+                    'created_by_type' => $data->createdBy?->type,
+                    'created_by_id' => $data->createdBy?->id,
+                ]
             );
 
             Paymentable::updateOrCreate([
-                'payment_id'       => $payment->id,
-                'paymentable_type' => $invoice::class,
-                'paymentable_id'   => $invoice->id,
+                'payment_id' => $payment->id,
+                'paymentable_type' => $data->invoice->type,
+                'paymentable_id' => $data->invoice->id,
             ]);
 
-            $this->updateInvoiceStatus($invoice);
+            $this->updateInvoiceStatus($data->invoice->resolveModel());
 
             return $payment;
         });

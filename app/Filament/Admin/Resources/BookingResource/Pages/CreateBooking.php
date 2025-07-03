@@ -72,16 +72,13 @@ class CreateBooking extends CreateRecord
     {
         try {
             $this->checkBookingConflicts();
-            $customerPhone = $data['customer_phone'];
-            $customer = Customer::where('phone', $customerPhone)->first();
 
             $payment = $this->createBookingFlow->execute(
                 $data,
-                $this->getGroupedSlots()->toArray(),
-                $customer,
+                $this->getGroupedSlots(),
                 [
-                    'created_by_type' => filament()->auth()->user() ? filament()->auth()->user()::class : null,
-                    'created_by_id' => filament()->auth()->id(),
+                    'creator' => filament()->auth()->user(),
+                    'is_walk_in' => true,
                     'callback_class' => AdminPaymentStatus::class,
                 ]
             );

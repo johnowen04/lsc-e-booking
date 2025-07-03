@@ -23,6 +23,7 @@ class BookingInvoice extends Model implements PayableInterface
         'invoice_number',
         'customer_id',
         'customer_name',
+        'customer_email',
         'customer_phone',
         'paid_amount',
         'total_amount',

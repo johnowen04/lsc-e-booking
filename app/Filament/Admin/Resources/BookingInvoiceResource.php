@@ -41,6 +41,7 @@ class BookingInvoiceResource extends Resource
                     ->label('Invoice Number')
                     ->searchable()
                     ->sortable(),
+                    
                 TextColumn::make('bookings.booking_number')
                     ->label('Booking Number')
                     ->tooltip(fn($record) => $record->bookings->pluck('booking_number')->implode(', '))
@@ -49,15 +50,18 @@ class BookingInvoiceResource extends Resource
                     ->limitList(2)
                     ->searchable()
                     ->sortable(),
+
                 TextColumn::make('customer_name')
                     ->label('Customer Name')
                     ->searchable()
                     ->sortable(),
+
                 TextColumn::make('created_at')
                     ->label('Created At')
                     ->dateTime('d M Y H:i')
                     ->sortable()
                     ->tooltip(fn($record) => $record->created_at->format('d M Y H:i:s')),
+
                 TextColumn::make('status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
@@ -97,21 +101,31 @@ class BookingInvoiceResource extends Resource
                     })
                     ->formatStateUsing(fn(string $state): string => Str::headline($state))
                     ->columnSpanFull(),
+
                 TextEntry::make('invoice_number')
                     ->label('Invoice Number')
                     ->columnSpanFull(),
+                    
                 TextEntry::make(name: 'customer_name')
                     ->label('Customer Name'),
-                TextEntry::make('customer_phone')
-                    ->label('Phone Number'),
+
+                TextEntry::make('customer_email')
+                    ->label('Email'),
+
+                // TextEntry::make('customer_phone')
+                //     ->label('Phone Number'),
+
                 TextEntry::make('paid_amount')
                     ->label('Paid Amount')
                     ->money('IDR'),
+
                 TextEntry::make('total_amount')
                     ->label('Total Amount')
                     ->money('IDR'),
+
                 TextEntry::make('createdBy.name')
                     ->label('Created By'),
+
                 TextEntry::make('created_at')
                     ->label('Created At')
                     ->since()

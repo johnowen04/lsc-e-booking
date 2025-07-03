@@ -6,20 +6,20 @@ use App\Actions\Booking\CreateBookingFlow;
 use App\Enums\PaymentMethod;
 use App\Models\Court;
 use App\Models\User;
+use App\Processors\Payment\PaymentProcessor;
 use App\Services\BookingService;
 use App\Services\BookingSlotService;
 use App\Services\InvoiceService;
-use App\Services\MidtransService;
-use App\Services\PaymentService;
 use App\Services\PricingRuleService;
 use Database\Seeders\TestDatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
+use Tests\Support\Traits\BuildsBookingSlots;
 use Tests\TestCase;
 
 class BookingPricingCalculationTest extends TestCase
 {
     use RefreshDatabase;
+    use BuildsBookingSlots;
 
     public function test_booking_applies_correct_dynamic_price_per_slot_booking_invoice_and_payment()
     {
@@ -34,33 +34,36 @@ class BookingPricingCalculationTest extends TestCase
 
         $formData = [
             'customer_name' => 'Jane Pricing',
+            'customer_email' => 'janepricing@example.com',
             'customer_phone' => '08123456789',
             'is_paid_in_full' => true,
             'payment_method' => PaymentMethod::CASH->value,
         ];
 
+        $pricingService = app(PricingRuleService::class);
+
         $groupedSlots = [[
             'court_id' => $court->id,
             'date' => $date,
-            'start_time' => $startTime,
-            'end_time' => $endTime,
+            'starts_at' => $startTime,
+            'ends_at' => $endTime,
+            'slots' => $this->buildSlots($court, $date, $startTime, $endTime),
         ]];
 
         $flow = new CreateBookingFlow(
             app(BookingService::class),
             app(BookingSlotService::class),
             app(InvoiceService::class),
-            app(PaymentService::class),
-            app(MidtransService::class),
+            $pricingService,
+            app(PaymentProcessor::class),
         );
 
         $payment = $flow->execute(
             $formData,
-            $groupedSlots,
-            customer: null,
+            collect($groupedSlots),
             options: [
-                'created_by_type' => $user::class,
-                'created_by_id' => $user->id,
+                'creator' => $user,
+                'is_walk_in' => true,
                 'callback_class' => \App\Filament\Admin\Pages\Payment\PaymentStatus::class,
             ]
         );
@@ -70,8 +73,6 @@ class BookingPricingCalculationTest extends TestCase
         $slots = $booking->slots;
 
         $this->assertNotEmpty($slots);
-
-        $pricingService = app(PricingRuleService::class);
 
         $totalCalculated = 0;
 

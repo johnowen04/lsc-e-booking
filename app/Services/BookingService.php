@@ -2,33 +2,36 @@
 
 namespace App\Services;
 
+use App\DTOs\Booking\CreateBookingData;
 use App\Models\Booking;
-use App\Models\BookingInvoice;
-use Carbon\Carbon;
 use Illuminate\Support\Str;
 
 class BookingService
 {
     public function __construct() {}
 
-    public function createBooking($bookingGroup, BookingInvoice $invoice, array $overrides = []): Booking
+    public function createBooking(CreateBookingData $data): Booking
     {
-        return Booking::create(array_merge(
-            [
-                'uuid' => Str::uuid(),
-                'customer_id' => null,
-                'customer_name' => 'Guest',
-                'customer_phone' => '081234567890',
-                'court_id' => $bookingGroup['court_id'],
-                'date' => $bookingGroup['date'],
-                'starts_at' => Carbon::parse($bookingGroup['date'] . $bookingGroup['start_time']),
-                'ends_at' => Carbon::parse($bookingGroup['date'] . $bookingGroup['end_time']),
-                'must_check_in_before' => Carbon::parse($bookingGroup['date'] . $bookingGroup['start_time'])->addMinutes(15), //ttl
-                'status' => 'held',
-                'attendance_status' => 'pending',
-                'booking_invoice_id' => $invoice->id,
-            ],
-            $overrides
-        ));
+        return Booking::create([
+            'uuid' => Str::uuid(),
+            'booking_number' => null,
+            'customer_id' => $data->customer->id,
+            'customer_name' => $data->customer->name,
+            'customer_email' => $data->customer->email,
+            'customer_phone' => $data->customer->phone,
+            'court_id' => $data->courtId,
+            'date' => $data->date->toDateString(),
+            'starts_at' => $data->startsAt,
+            'ends_at' => $data->endsAt,
+            'must_check_in_before' => $data->mustCheckInBefore,
+            'total_price' => $data->totalPrice,
+            'status' => $data->status,
+            'attendance_status' => $data->attendanceStatus,
+            'note' => $data->note,
+            'rescheduled_from_booking_id' => $data->rescheduledFromBookingId,
+            'booking_invoice_id' => $data->invoiceId,
+            'created_by_type' => $data->createdBy?->type,
+            'created_by_id' => $data->createdBy?->id,
+        ]);
     }
 }

@@ -67,6 +67,7 @@ class MidtransService
             $expectedTotal,
             $invoice->customer_name,
             $invoice->customer_phone,
+            $invoice->customer_email,
             $itemDetails,
             $callbackFinishUrl,
             $callbackErrorUrl,
@@ -119,7 +120,8 @@ class MidtransService
         string $orderId,
         float|int $expectedTotal,
         string $customerName,
-        string $customerPhone,
+        ?string $customerPhone,
+        ?string $customerEmail,
         array $itemDetails,
         ?string $callbackFinishUrl = null,
         ?string $callbackErrorUrl = null,
@@ -135,7 +137,8 @@ class MidtransService
             ],
             'customer_details' => [
                 'first_name' => $customerName,
-                'phone' => $customerPhone,
+                "email" => $customerEmail,
+                ...($customerPhone ? ['phone' => $customerPhone] : []),
             ],
             'item_details' => $itemDetails,
             'callbacks' => [

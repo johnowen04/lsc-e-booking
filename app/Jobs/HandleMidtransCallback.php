@@ -2,8 +2,12 @@
 
 namespace App\Jobs;
 
+use App\DTOs\Payment\UpdatePaymentData;
+use App\DTOs\Shared\CreatedByData;
+use App\DTOs\Shared\InvoiceReference;
+use App\DTOs\Shared\MoneyData;
 use App\Models\Payment;
-use App\Services\PaymentService;
+use App\Processors\Payment\PaymentProcessor;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
@@ -17,64 +21,62 @@ class HandleMidtransCallback implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public function __construct(
-        public Notification $notification
+        public Notification $notification,
     ) {}
 
     public function handle(): void
     {
+        $paymentProcessor = app(PaymentProcessor::class);
+
         try {
-            $transactionStatus = $this->notification->transaction_status ?? null;
-            $transactionId = $this->notification->transaction_id ?? null;
-            $statusMessage = $this->notification->status_message ?? null;
-            $paymentMethod = $this->notification->payment_type ?? null;
-            $orderId = $this->notification->order_id ?? null;
-            $grossAmount = $this->notification->gross_amount ?? null;
+            $notification = $this->notification;
+            $transactionStatus = $notification->transaction_status ?? null;
+            $transactionId = $notification->transaction_id ?? null;
+            $statusMessage = $notification->status_message ?? null;
+            $paymentMethod = $notification->payment_type ?? 'qris';
+            $orderId = $notification->order_id ?? null;
+            $grossAmount = (float) ($notification->gross_amount ?? 0);
 
             $invoice = Payment::where('uuid', $orderId)->first()?->invoice();
 
             if (!$invoice) {
-                Log::warning("No invoice found for Midtrans callback order_id: $orderId");
+                Log::warning("No invoice found for Midtrans callback order_id: {$orderId}");
                 return;
             }
+            
+            $status = match ($transactionStatus) {
+                'settlement', 'capture' => 'paid',
+                'pending' => 'pending',
+                default => 'failed',
+            };
 
-            // if ($transactionStatus === 'settlement') {
-            if (in_array($transactionStatus, ['settlement', 'capture'])) {
-                $settlementTime = $this->notification->settlement_time ?? null;
-                $paidAmount = (float) $grossAmount;
-                $status = 'paid';
-                $paidAt = $settlementTime;
-                $expiresAt = null;
-            } elseif ($transactionStatus === 'pending') {
-                $expiryTime = $this->notification->expiry_time ?? null;
-                Log::info("Midtrans transaction pending for order_id: $orderId, expires at: $expiryTime");
-                $paidAmount = 0;
-                $status = 'pending';
-                $paidAt = null;
-                $expiresAt = $expiryTime;
-            } else {
-                $expiryTime = $this->notification->expiry_time ?? null;
-                $paidAmount = 0;
-                $status = 'failed';
-                $paidAt = null;
-                $expiresAt = $expiryTime;
-            }
+            $paidAmount = in_array($transactionStatus, ['settlement', 'capture']) ? $grossAmount : 0;
+            $paidAt = $notification->settlement_time ?? null;
+            $expiresAt = $notification->expiry_time ?? null;
 
-            $notes = $statusMessage;
-
-            app(PaymentService::class)->updatePayment(
-                $orderId,
-                $paidAmount,
-                $paymentMethod,
-                $status,
-                $invoice,
-                $transactionId,
-                'midtrans',
-                $notes,
-                $paidAt,
-                $expiresAt,
+            $updateData = new UpdatePaymentData(
+                orderId: $orderId,
+                amounts: new MoneyData(
+                    total: (float) $invoice->total_amount,
+                    paid: $paidAmount,
+                ),
+                method: $paymentMethod,
+                status: $status,
+                referenceCode: $transactionId,
+                providerName: 'midtrans',
+                notes: $statusMessage,
+                paidAt: $status === 'paid' ? $paidAt : null,
+                expiresAt: $status !== 'paid' ? $expiresAt : null,
+                invoice: new InvoiceReference(
+                    type: get_class($invoice),
+                    id: $invoice->id,
+                ),
+                createdBy: new CreatedByData(),
             );
+
+            $paymentProcessor->handleCallback($updateData);
         } catch (\Throwable $th) {
-            Log::warning('❌ Error handling Midtrans callback:', [
+            Log::warning('❌ Error handling Midtrans callback', [
                 'message' => $th->getMessage(),
                 'trace' => $th->getTraceAsString(),
             ]);

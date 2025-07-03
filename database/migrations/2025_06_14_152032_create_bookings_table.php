@@ -18,6 +18,7 @@ return new class extends Migration
             $table->foreignId('booking_invoice_id')->nullable()->constrained('booking_invoices')->nullOnDelete();
             $table->foreignId('customer_id')->nullable()->constrained('customers')->nullOnDelete();
             $table->string('customer_name')->nullable();
+            $table->string('customer_email')->nullable();
             $table->string('customer_phone')->nullable();
             $table->foreignId('court_id')->constrained()->cascadeOnDelete();
             $table->date('date');

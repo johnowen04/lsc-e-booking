@@ -15,7 +15,7 @@
                 <span>{{ $booking['formatted_date'] }}</span>
                 <span>•</span>
                 <span class="font-medium">
-                    {{ $booking['start_time'] }} - {{ $booking['end_time'] }}
+                    {{ $booking['starts_at'] }} - {{ $booking['ends_at'] }}
                 </span>
                 <span class="text-xs text-white-500 dark:text-white-400 ml-1">
                     ({{ $booking['duration'] }} hour{{ $booking['duration'] > 1 ? 's' : '' }})

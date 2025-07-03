@@ -2,9 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Booking;
+use App\DTOs\BookingSlot\CreateBookingSlotData;
 use App\Models\BookingSlot;
-use App\Models\PricingRule;
 use Carbon\Carbon;
 
 class BookingSlotService
@@ -26,56 +25,32 @@ class BookingSlotService
     }
 
     public function createBookingSlots(
-        Booking $booking,
-        PricingRuleService $pricingRuleService
+        array $bookingSlotsDto,
     ): array {
         $bookingSlots = [];
-        $hour = $booking->starts_at->copy();
 
-        while ($hour < $booking->ends_at) {
-            $pricingRule = $pricingRuleService->getPricingRuleForHour(
-                $booking->court_id,
-                $booking->date->toDateString(),
-                $hour
-            );
-
-            $bookingSlot = $this->createBookingSlot(
-                $booking,
-                $booking->court_id,
-                $booking->date->toDateString(),
-                $hour,
-                $hour->copy()->addHour(),
-                $pricingRule
-            );
-
-            $bookingSlots[] = $bookingSlot;
-            $hour->addHour();
+        foreach ($bookingSlotsDto as $slotDto) {
+            $slot = $this->createBookingSlot($slotDto);
+            $bookingSlots[] = $slot;
         }
 
         return $bookingSlots;
     }
 
     protected function createBookingSlot(
-        Booking $booking,
-        int $courtId,
-        string $date,
-        Carbon $startsAt,
-        Carbon $endsAt,
-        PricingRule $pricingRule,
-        array $overrides = [],
+        CreateBookingSlotData $slotData,
     ): BookingSlot {
-        return BookingSlot::create(array_merge(
+        return BookingSlot::create(
             [
-                'booking_id' => $booking->id,
-                'court_id' => $courtId,
-                'date' => $date,
-                'start_at' => $startsAt,
-                'end_at' => $endsAt,
-                'status' => 'held',
-                'price' => $pricingRule->price_per_hour,
-                'pricing_rule_id' => $pricingRule->id,
-            ],
-            $overrides
-        ));
+                'booking_id' => $slotData->bookingId,
+                'court_id' => $slotData->courtId,
+                'date' => $slotData->date,
+                'start_at' => $slotData->startAt,
+                'end_at' => $slotData->endAt,
+                'status' => $slotData->status,
+                'price' => $slotData->price,
+                'pricing_rule_id' => $slotData->pricingRuleId,
+            ]
+        );
     }
 }
