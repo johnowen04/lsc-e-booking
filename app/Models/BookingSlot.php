@@ -7,15 +7,15 @@ use App\Models\Scopes\HasStatusScopes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class BookingSlot extends Model
 {
-    use HasFactory, HasStatusScopes, HasDateRangeScopes, SoftDeletes;
+    use HasFactory, HasStatusScopes, HasDateRangeScopes;
 
     protected $fillable = [
         'booking_id',
         'court_id',
+        'court_schedule_slot_id',
         'date',
         'start_at',
         'end_at',
@@ -49,6 +49,15 @@ class BookingSlot extends Model
     public function court(): BelongsTo
     {
         return $this->belongsTo(Court::class);
+    }
+
+    /**
+     * The court schedule slot this booking slot is based on.
+     * This can be null if the booking slot is not based on a specific schedule slot.
+     */
+    public function courtScheduleSlot(): BelongsTo
+    {
+        return $this->belongsTo(CourtScheduleSlot::class);
     }
 
     /**

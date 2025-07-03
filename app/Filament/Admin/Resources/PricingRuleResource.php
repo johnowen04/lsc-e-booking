@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Resources;
 use App\Filament\Admin\Resources\PricingRuleResource\Pages;
 use App\Filament\Admin\Resources\PricingRuleResource\RelationManagers;
 use App\Models\PricingRule;
+use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
@@ -95,7 +96,8 @@ class PricingRuleResource extends Resource
                     )
                     ->required()
                     ->reactive()
-                    ->extraAttributes(['size' => 5]),
+                    ->extraAttributes(['size' => 5])
+                    ->native(false),
 
                 Select::make('time_end')
                     ->label('End Time')
@@ -127,7 +129,8 @@ class PricingRuleResource extends Resource
                         if ($state && ! array_key_exists($state, $options)) {
                             $component->state(null);
                         }
-                    }),
+                    })
+                    ->native(false),
 
                 DatePicker::make('start_date')
                     ->label('Start Date')
@@ -188,13 +191,14 @@ class PricingRuleResource extends Resource
                     ->label('Start Time')
                     ->sortable()
                     ->searchable()
-                    ->formatStateUsing(fn($state) => $state->format('H:i')),
+                    ->formatStateUsing(fn($state) => Carbon::createFromTimeString($state)->format('H:i')),
+
 
                 TextColumn::make('time_end')
                     ->label('End Time')
                     ->sortable()
                     ->searchable()
-                    ->formatStateUsing(fn($state) => $state->format('H:i')),
+                    ->formatStateUsing(fn($state) => Carbon::createFromTimeString($state)->format('H:i')),
 
                 TextColumn::make('price_per_hour')
                     ->label('Price per Hour')

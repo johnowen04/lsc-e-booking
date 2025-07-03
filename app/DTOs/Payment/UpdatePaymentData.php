@@ -5,6 +5,7 @@ namespace App\DTOs\Payment;
 use App\DTOs\Shared\CreatedByData;
 use App\DTOs\Shared\MoneyData;
 use App\DTOs\Shared\InvoiceReference;
+use Carbon\Carbon;
 
 class UpdatePaymentData
 {
@@ -18,7 +19,7 @@ class UpdatePaymentData
         public ?string $referenceCode = null,
         public ?string $providerName = null,
         public ?string $notes = null,
-        public ?string $paidAt = null,
-        public ?string $expiresAt = null,
+        public ?Carbon $paidAt = null,
+        public ?Carbon $expiresAt = null,
     ) {}
 }

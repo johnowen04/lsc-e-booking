@@ -105,12 +105,19 @@ class BookingInvoice extends Model implements PayableInterface
 
             $booking->save();
 
-            $booking->slots()->update([
-                'status' => $newBookingStatus === 'confirmed' ? 'confirmed' : 'held',
-            ]);
+            foreach ($booking->slots as $slot) {
+                $slot->update([
+                    'status' => $newBookingStatus === 'confirmed' ? 'confirmed' : 'held',
+                ]);
+
+                if ($slot->court_schedule_slot_id) {
+                    $slot->courtScheduleSlot()->update([
+                        'status' => $newBookingStatus === 'confirmed' ? 'confirmed' : 'held',
+                    ]);
+                }
+            }
 
             Log::info("✅ Booking ID {$booking->id} updated to status '{$newBookingStatus}'");
-            Log::info("✅ BookingSlot(s) for Booking ID {$booking->id} updated to '{$newBookingStatus}'");
         }
     }
 

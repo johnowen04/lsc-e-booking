@@ -11,6 +11,7 @@ use App\Models\Payment;
 use App\Processors\Payment\PaymentProcessor;
 use App\Services\BookingService;
 use App\Services\BookingSlotService;
+use App\Services\CourtSlotAvailabilityService;
 use App\Services\InvoiceService;
 use App\Services\PricingRuleService;
 use Illuminate\Support\Collection;
@@ -19,13 +20,14 @@ use Illuminate\Support\Facades\DB;
 class CreateBookingFlow extends AbstractBookingFlow
 {
     public function __construct(
+        CourtSlotAvailabilityService $courtSlotAvailabilityService,
         BookingService $bookingService,
         BookingSlotService $bookingSlotService,
         InvoiceService $invoiceService,
         PricingRuleService $pricingRuleService,
         PaymentProcessor $paymentProcessor,
     ) {
-        parent::__construct($bookingService, $bookingSlotService, $invoiceService, $pricingRuleService, $paymentProcessor);
+        parent::__construct($courtSlotAvailabilityService, $bookingService, $bookingSlotService, $invoiceService, $pricingRuleService, $paymentProcessor);
     }
 
     public function execute(array $formData, Collection $groupedSlots, ?array $options = null): Payment

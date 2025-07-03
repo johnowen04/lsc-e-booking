@@ -11,10 +11,10 @@ return new class extends Migration
     public function up(): void
     {
         DB::statement(<<<SQL
-            CREATE UNIQUE INDEX unique_active_bookings 
-            ON bookings (court_id, starts_at, ends_at)
-            WHERE deleted_at IS NULL AND status IN ('held', 'confirmed')
-        SQL);
+        CREATE UNIQUE INDEX unique_active_bookings 
+        ON bookings (court_id, starts_at, ends_at)
+        WHERE status IN ('held', 'confirmed')
+    SQL);
     }
 
     /**

@@ -57,7 +57,7 @@ class PaymentProcessor
             amounts: $data->amounts,
             method: PaymentMethod::CASH->value,
             status: 'paid',
-            paidAt: now()->toDateTimeString(),
+            paidAt: now(),
             invoice: $data->invoice,
             createdBy: $data->createdBy
         );

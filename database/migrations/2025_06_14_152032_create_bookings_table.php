@@ -35,7 +35,6 @@ return new class extends Migration
             $table->foreignId('rescheduled_from_booking_id')->nullable()->constrained('bookings')->nullOnDelete();
             $table->string('created_by_type')->nullable();
             $table->unsignedBigInteger('created_by_id')->nullable();
-            $table->softDeletes();
             $table->timestamps();
         });
     }

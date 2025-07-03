@@ -15,6 +15,7 @@ use App\Models\Payment;
 use App\Processors\Payment\PaymentProcessor;
 use App\Services\BookingService;
 use App\Services\BookingSlotService;
+use App\Services\CourtSlotAvailabilityService;
 use App\Services\InvoiceService;
 use App\Services\PricingRuleService;
 use Carbon\Carbon;
@@ -24,6 +25,7 @@ use Illuminate\Support\Collection;
 abstract class AbstractBookingFlow
 {
     public function __construct(
+        protected CourtSlotAvailabilityService $courtSlotAvailabilityService,
         protected BookingService $bookingService,
         protected BookingSlotService $bookingSlotService,
         protected InvoiceService $invoiceService,
@@ -94,6 +96,13 @@ abstract class AbstractBookingFlow
             );
 
             $startHour = Carbon::parse("{$slot['date']} {$slot['hour']}:00");
+            $date = Carbon::parse($slot['date']);
+
+            $courtScheduleSlot = $this->courtSlotAvailabilityService->reserve(
+                $courtId,
+                $date,
+                $startHour
+            );
 
             return new CreateBookingSlotData(
                 bookingId: $booking->id,
@@ -103,6 +112,7 @@ abstract class AbstractBookingFlow
                 endAt: $startHour->copy()->addHour(),
                 price: $pricingRule->price_per_hour,
                 pricingRuleId: $pricingRule->id ?? null,
+                courtScheduleSlotId: $courtScheduleSlot->id,
             );
         })->toArray();
 

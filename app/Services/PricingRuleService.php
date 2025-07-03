@@ -7,71 +7,32 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class PricingRuleService
 {
     protected int $ttlMinutes = 10;
-
-    public function calculateTotalForGroupedSlots(Collection $groupedSlots): float
-    {
-        return $groupedSlots->sum(function (array $group) {
-            $date = Carbon::parse($group['date']);
-            $startsAt = Carbon::parse($group['starts_at']);
-            $endsAt = Carbon::parse($group['ends_at']);
-            $courtId = $group['court_id'];
-
-            $hour = $startsAt->copy();
-            $total = 0;
-
-            while ($hour < $endsAt) {
-                $rule = $this->getPricingRuleForHour($courtId, $date->toDateString(), $hour);
-                $total += $rule->price_per_hour;
-                $hour->addHour();
-            }
-
-            return $total;
-        });
-    }
-
-    public function calculatePricePerGroup(array $group): float
-    {
-        $date = Carbon::parse($group['date']);
-        $startsAt = Carbon::parse("{$group['date']} {$group['starts_at']}");
-        $endsAt = Carbon::parse("{$group['date']} {$group['ends_at']}");
-        $courtId = $group['court_id'];
-
-        $hour = $startsAt->copy();
-        $total = 0;
-
-        while ($hour < $endsAt) {
-            $rule = $this->getPricingRuleForHour($courtId, $date->toDateString(), $hour);
-            $total += $rule->price_per_hour;
-            $hour->addHour();
-        }
-
-        return $total;
-    }
 
     public function hasAnyPricingRule(): bool
     {
         return PricingRule::query()->exists();
     }
 
-    public function getPricingRuleForHour(int $courtId, string $date, Carbon $hour): Model
+    public function getPricingRuleForHour(int $courtId, string $date, Carbon $hour): PricingRule
     {
         $rules = $this->getCachedRules($courtId, $date);
 
         $rule = $rules->first(function ($rule) use ($hour) {
-            $start = Carbon::createFromTimeString($rule->time_start);
-            $end = Carbon::createFromTimeString($rule->time_end);
+            $start = $hour->copy()->setTimeFromTimeString($rule->time_start);
+            $end = $hour->copy()->setTimeFromTimeString($rule->time_end);
 
             if ($start->eq(Carbon::createFromTime(0)) && $end->eq(Carbon::createFromTime(0))) {
-                return true; // applies to all hours
+                return true;
             }
 
             return $start < $end
-                ? ($hour->between($start, $end->subSecond()))
-                : ($hour->gte($start) || $hour->lt($end));
+                ? $hour->gte($start) && $hour->lt($end)
+                : $hour->gte($start) || $hour->lt($end);
         });
 
         if (! $rule) {
@@ -95,15 +56,23 @@ class PricingRuleService
         return $courtIds->mapWithKeys(function ($courtId) use ($dateString) {
             $hourPrices = collect(range(8, 21)) // 08:00 to 21:00
                 ->mapWithKeys(function ($hour) use ($courtId, $dateString) {
-                    $hourTime = Carbon::createFromFormat('H:i', "$hour:00");
+                    $hourTime = Carbon::parse($dateString)->setTime($hour, 0);
 
                     try {
-                        $price = $this->getPriceForHour($courtId, $dateString, $hourTime);
+                        $rule = $this->getPricingRuleForHour($courtId, $dateString, $hourTime);
+                        $price = $rule->price_per_hour;
+                        $ruleId = $rule->id;
                     } catch (\Throwable) {
                         $price = 0;
+                        $ruleId = null;
                     }
 
-                    return [$hour => (object) ['price' => $price]];
+                    return [
+                        $hour => (object) [
+                            'price' => $price,
+                            'pricing_rule_id' => $ruleId,
+                        ],
+                    ];
                 });
 
             return [$courtId => $hourPrices];

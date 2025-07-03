@@ -6,43 +6,58 @@ use App\Models\BookingSlot;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Grid;
 use Filament\Tables;
-use Filament\Tables\Actions\ExportAction;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
+use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 class CourtOccupancyTableWidget extends BaseWidget
 {
     protected int | string | array $columnSpan = 'full';
     protected static bool $isDiscovered = false;
 
+    public function getTableQuery(): Builder
+    {
+        $from = $this->tableFilters['date_range']['from'] ?? now()->toDateString();
+        $to = $this->tableFilters['date_range']['to'] ?? now()->toDateString();
+
+        $fromDate = \Carbon\Carbon::parse($from)->startOfDay();
+        $toDate = \Carbon\Carbon::parse($to)->endOfDay();
+        $days = $fromDate->diffInDays($toDate) + 1; // inclusive
+
+        $slotsPerDay = 14;
+        $expectedSlotsPerCourt = $days * $slotsPerDay;
+
+        return BookingSlot::query()
+            ->select([
+                'booking_slots.court_id',
+                'courts.name as court_name',
+                DB::raw("{$expectedSlotsPerCourt} as total_slots"),
+                DB::raw("COUNT(*) FILTER (WHERE booking_slots.status IN ('confirmed', 'held')) as booked_slots"),
+                DB::raw("ROUND(
+                COUNT(*) FILTER (WHERE booking_slots.status IN ('confirmed', 'held'))::decimal
+                / NULLIF({$expectedSlotsPerCourt}, 0) * 100, 1
+            ) as booked_rate"),
+                DB::raw("COUNT(*) FILTER (WHERE booking_slots.status = 'attended') as attended_slots"),
+                DB::raw("ROUND(
+                COUNT(*) FILTER (WHERE booking_slots.status = 'attended')::decimal
+                / NULLIF({$expectedSlotsPerCourt}, 0) * 100, 1
+            ) as occupancy_rate"),
+            ])
+            ->join('courts', 'booking_slots.court_id', '=', 'courts.id')
+            ->whereBetween('booking_slots.date', [$fromDate->toDateString(), $toDate->toDateString()])
+            ->groupBy('booking_slots.court_id', 'courts.name')
+            ->orderBy('booking_slots.court_id', 'desc');
+    }
+
     public function table(Table $table): Table
     {
         return $table
-            ->query(
-                BookingSlot::query()
-                    ->select([
-                        'booking_slots.court_id',
-                        'courts.name as court_name',
-                        DB::raw('COUNT(*) as total_slots'),
-                        DB::raw("COUNT(*) FILTER (WHERE booking_slots.status = 'confirmed' OR booking_slots.status = 'held') as booked_slots"),
-                        DB::raw("ROUND(
-                            COUNT(*) FILTER (WHERE booking_slots.status = 'confirmed' OR booking_slots.status = 'held')::decimal
-                            / NULLIF(COUNT(*), 0) * 100, 1
-                        ) as booked_rate"),
-                        DB::raw("COUNT(*) FILTER (WHERE booking_slots.status = 'attended') as attended_slots"),
-                        DB::raw("ROUND(
-                            COUNT(*) FILTER (WHERE booking_slots.status = 'attended')::decimal
-                            / NULLIF(COUNT(*), 0) * 100, 1
-                        ) as occupancy_rate"),
-                    ])
-                    ->join('courts', 'booking_slots.court_id', '=', 'courts.id')
-                    ->groupBy('booking_slots.court_id', 'courts.name')
-                    ->orderBy('booking_slots.court_id', 'desc')
-            )
+            ->query($this->getTableQuery())
             ->columns([
                 Tables\Columns\TextColumn::make('court_name')
                     ->label('Court Name')
@@ -70,10 +85,12 @@ class CourtOccupancyTableWidget extends BaseWidget
                             DatePicker::make('from')
                                 ->label('From')
                                 ->columnSpan(4)
+                                ->live()
                                 ->default(now()), // span 50% of the width
                             DatePicker::make('to')
                                 ->label('To')
                                 ->columnSpan(4)
+                                ->live()
                                 ->default(now()),
                         ]),
                     ])
@@ -89,17 +106,10 @@ class CourtOccupancyTableWidget extends BaseWidget
                     }),
             ], layout: FiltersLayout::AboveContentCollapsible)
             ->defaultSort('court_id', 'desc')
-            ->actions([
-                ExportAction::make()
-                    ->label('Export')
-                    ->exportable(fn($record) => [
-                        'Court Name'       => $record->court_name,
-                        'Total Slots'      => $record->total_slots,
-                        'Booked Slots'     => $record->booked_slots,
-                        'Booked Rate (%)'  => $record->booked_rate,
-                        'Attended Slots'   => $record->attended_slots,
-                        'Occupancy Rate (%)' => $record->occupancy_rate,
-                    ])
+            ->headerActions([
+                ExportAction::make()->exports([
+                    ExcelExport::make('table')->fromTable(),
+                ])
             ]);
     }
 

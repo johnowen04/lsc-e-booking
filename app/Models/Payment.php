@@ -32,6 +32,7 @@ class Payment extends Model
         'uuid' => 'string',
         'amount' => 'decimal:2',
         'paid_at' => 'datetime',
+        'expires_at' => 'datetime',
     ];
 
     /**

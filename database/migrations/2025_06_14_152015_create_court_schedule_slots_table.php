@@ -11,21 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('booking_slots', function (Blueprint $table) {
+        Schema::create('court_schedule_slots', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('booking_id')->constrained()->cascadeOnDelete();
             $table->foreignId('court_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('court_schedule_slot_id')->nullable()->constrained('court_schedule_slots')->nullOnDelete();
             $table->date('date');
             $table->dateTime('start_at');
             $table->dateTime('end_at');
-            $table->enum('status', ['held', 'confirmed', 'attended', 'no_show', 'cancelled', 'expired'])->default('held');
-            $table->decimal('price', 10, 2);
+            $table->decimal('price', 10, 2)->nullable();
             $table->foreignId('pricing_rule_id')->nullable()->constrained('pricing_rules')->nullOnDelete();
-            $table->dateTime('attended_at')->nullable();
-            $table->dateTime('cancelled_at')->nullable();
-            $table->dateTime('expired_at')->nullable();
+            $table->enum('status', ['available', 'held', 'confirmed', 'attended'])->default('available');
             $table->timestamps();
+
+            $table->unique(['court_id', 'start_at']);
+            $table->index(['court_id', 'date']);
         });
     }
 
@@ -34,6 +32,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('booking_slots');
+        Schema::dropIfExists('court_schedule_slots');
     }
 };

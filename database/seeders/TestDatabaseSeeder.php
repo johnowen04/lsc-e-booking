@@ -6,6 +6,8 @@ use Illuminate\Database\Seeder;
 use App\Models\Court;
 use App\Models\PricingRule;
 use App\Models\User;
+use App\Services\CourtScheduleSlotGeneratorService;
+use Carbon\Carbon;
 
 class TestDatabaseSeeder extends Seeder
 {
@@ -24,6 +26,7 @@ class TestDatabaseSeeder extends Seeder
             'price_per_hour' => 100000,
             'type' => 'regular',
             'priority' => 1,
+            'is_active' => true,
             'created_by' => $adminUser->id,
         ]);
 
@@ -35,6 +38,7 @@ class TestDatabaseSeeder extends Seeder
             'price_per_hour' => 150000,
             'type' => 'peak',
             'priority' => 2,
+            'is_active' => true,
             'created_by' => $adminUser->id,
         ]);
 
@@ -48,6 +52,7 @@ class TestDatabaseSeeder extends Seeder
             'time_end' => '22:00:00',
             'price_per_hour' => 50000,
             'priority' => 3,
+            'is_active' => true,
             'created_by' => $adminUser->id,
         ]);
 
@@ -64,5 +69,11 @@ class TestDatabaseSeeder extends Seeder
             'is_active' => true,
             'created_by' => $adminUser->id,
         ]);
+
+        $generator = app(CourtScheduleSlotGeneratorService::class);
+        $generator->generateSlotsForDateRange(
+            Carbon::parse('2025-07-01'),
+            Carbon::parse('2025-07-07')
+        );
     }
 }

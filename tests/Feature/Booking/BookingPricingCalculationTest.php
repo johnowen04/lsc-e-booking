@@ -9,12 +9,15 @@ use App\Models\User;
 use App\Processors\Payment\PaymentProcessor;
 use App\Services\BookingService;
 use App\Services\BookingSlotService;
+use App\Services\CourtSlotAvailabilityService;
+use App\Services\CourtScheduleSlotGeneratorService;
 use App\Services\InvoiceService;
 use App\Services\PricingRuleService;
 use Database\Seeders\TestDatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\Traits\BuildsBookingSlots;
 use Tests\TestCase;
+use Carbon\Carbon;
 
 class BookingPricingCalculationTest extends TestCase
 {
@@ -31,6 +34,9 @@ class BookingPricingCalculationTest extends TestCase
         $date = '2025-07-03'; // Thursday
         $startTime = '08:00:00';
         $endTime = '10:00:00'; // 2 hours
+
+        // Ensure court schedule slots with pricing exist
+        app(CourtScheduleSlotGeneratorService::class)->generateSlotsForCourtAndDate($court, Carbon::parse($date));
 
         $formData = [
             'customer_name' => 'Jane Pricing',
@@ -51,6 +57,7 @@ class BookingPricingCalculationTest extends TestCase
         ]];
 
         $flow = new CreateBookingFlow(
+            app(CourtSlotAvailabilityService::class),
             app(BookingService::class),
             app(BookingSlotService::class),
             app(InvoiceService::class),

@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Processors\Payment\PaymentProcessor;
 use App\Services\BookingService;
 use App\Services\BookingSlotService;
+use App\Services\CourtSlotAvailabilityService;
 use App\Services\InvoiceService;
 use App\Services\PricingRuleService;
 use Database\Seeders\TestDatabaseSeeder;
@@ -34,6 +35,10 @@ class RepaymentBookingFlowTest extends TestCase
         $startTime = '08:00:00';
         $endTime = '10:00:00';
 
+        // 🧩 Make sure schedule slots exist
+        app(\App\Services\CourtScheduleSlotGeneratorService::class)
+            ->generateSlotsForCourtAndDate($court, \Illuminate\Support\Carbon::parse($date));
+
         $groupedSlots = [
             [
                 'court_id' => $court->id,
@@ -45,6 +50,7 @@ class RepaymentBookingFlowTest extends TestCase
         ];
 
         $createFlow = new CreateBookingFlow(
+            app(CourtSlotAvailabilityService::class),
             app(BookingService::class),
             app(BookingSlotService::class),
             app(InvoiceService::class),

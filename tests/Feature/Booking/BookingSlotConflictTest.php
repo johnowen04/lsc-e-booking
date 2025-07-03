@@ -9,12 +9,15 @@ use App\Models\User;
 use App\Processors\Payment\PaymentProcessor;
 use App\Services\BookingService;
 use App\Services\BookingSlotService;
+use App\Services\CourtScheduleSlotGeneratorService;
+use App\Services\CourtSlotAvailabilityService;
 use App\Services\InvoiceService;
 use App\Services\PricingRuleService;
 use Database\Seeders\TestDatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\Traits\BuildsBookingSlots;
 use Tests\TestCase;
+use Carbon\Carbon;
 
 class BookingSlotConflictTest extends TestCase
 {
@@ -29,7 +32,14 @@ class BookingSlotConflictTest extends TestCase
         $court = Court::first();
         $date = '2025-07-05';
 
+        // Ensure schedule slots are generated
+        app(CourtScheduleSlotGeneratorService::class)->generateSlotsForCourtAndDate(
+            $court,
+            Carbon::parse($date)
+        );
+
         $flow = new CreateBookingFlow(
+            app(CourtSlotAvailabilityService::class),
             app(BookingService::class),
             app(BookingSlotService::class),
             app(InvoiceService::class),
@@ -37,7 +47,7 @@ class BookingSlotConflictTest extends TestCase
             app(PaymentProcessor::class),
         );
 
-        // First booking: 08:00–10:00 (creates 2 slots)
+        // First booking: 08:00–10:00
         $flow->execute(
             formData: [
                 'customer_name' => 'Alice',
@@ -60,9 +70,9 @@ class BookingSlotConflictTest extends TestCase
             ]
         );
 
-        // Second booking: 09:00–11:00 — overlaps with first
-        $this->expectException(\Illuminate\Database\QueryException::class);
-        $this->expectExceptionMessage('UNIQUE constraint failed: booking_slots.court_id, booking_slots.start_at, booking_slots.end_at');
+        // Second booking: 09:00–11:00 (overlaps with previous)
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage("Slot for court={$court->id} at {$date} 09:00 is not available.");
 
         $flow->execute(
             formData: [

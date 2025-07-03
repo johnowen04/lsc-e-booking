@@ -2,9 +2,8 @@
 
 namespace App\Livewire\Page\Booking;
 
-use App\Models\BookingSlot;
 use App\Models\Court;
-use App\Services\PricingRuleService;
+use App\Models\CourtScheduleSlot;
 use App\Traits\InteractsWithBookingCart;
 use Carbon\Carbon;
 use Filament\Notifications\Notification;
@@ -37,6 +36,11 @@ class BookingSlotGrid extends Component
         $this->slots = $this->getCachedSlots();
     }
 
+    public function hasGeneratedSchedule(): bool
+    {
+        return CourtScheduleSlot::where('date', $this->selectedDate)->exists();
+    }
+
     protected function getCachedSlots()
     {
         $cacheKey = "slots_{$this->selectedDate}";
@@ -51,69 +55,63 @@ class BookingSlotGrid extends Component
     {
         $startHour = 8;
         $endHour = 22;
-        $start = Carbon::parse("{$this->selectedDate} {$startHour}:00");
-        $end = Carbon::parse("{$this->selectedDate} {$endHour}:00");
+
+        $bookingDate = Carbon::parse($this->selectedDate);
         $bookingCutoff = now()->subHour();
 
+        $start = $bookingDate->copy()->setTime($startHour, 0);
+        $end = $bookingDate->copy()->setTime($endHour, 0);
+
         $courtIds = $this->courts->pluck('id');
-        $bookingSlots = BookingSlot::query()
+
+        $scheduleSlots = CourtScheduleSlot::query()
             ->whereIn('court_id', $courtIds)
-            ->where('start_at', '<', $end)
-            ->where('end_at', '>', $start)
-            ->whereIn('status', ['confirmed', 'held'])
+            ->whereDate('date', $this->selectedDate)
+            ->whereBetween('start_at', [$start, $end])
             ->get();
 
-        $pricingRules = app(PricingRuleService::class)->getPricesForDate($courtIds, Carbon::parse($this->selectedDate));
-
         return collect(range($startHour, $endHour - 1))->map(function ($hour) use (
-            $bookingSlots,
-            $bookingCutoff,
-            $pricingRules
+            $scheduleSlots,
+            $bookingDate,
+            $bookingCutoff
         ) {
-            $slotStart = Carbon::parse("{$this->selectedDate} {$hour}:00");
+            $slotStart = $bookingDate->copy()->setTime($hour, 0);
             $slotEnd = $slotStart->copy()->addHour();
 
             return [
                 'time' => "{$slotStart->format('H:i')} - {$slotEnd->format('H:i')}",
                 'hour' => $hour,
-                'slots' => $this->generateCourtSlots($slotStart, $slotEnd, $bookingSlots, $bookingCutoff, $pricingRules),
+                'slots' => $this->generateCourtSlots($slotStart, $scheduleSlots, $bookingCutoff),
             ];
         })->values();
     }
 
     protected function generateCourtSlots(
         Carbon $slotStart,
-        Carbon $slotEnd,
-        $bookingSlots,
-        Carbon $bookingCutoff,
-        $pricingRules
+        $scheduleSlots,
+        Carbon $bookingCutoff
     ): array {
-        $hour = (int) $slotStart->format('H');
-
         return $this->courts->mapWithKeys(function ($court) use (
             $slotStart,
-            $slotEnd,
-            $bookingSlots,
-            $bookingCutoff,
-            $pricingRules,
-            $hour
+            $scheduleSlots,
+            $bookingCutoff
         ) {
-            $overlapping = $bookingSlots
+            $slot = $scheduleSlots
                 ->where('court_id', $court->id)
-                ->first(fn($slot) => $slot->start_at < $slotEnd && $slot->end_at > $slotStart);
+                ->first(fn($s) => $s->start_at->equalTo($slotStart));
 
-            $status = match ($overlapping->status ?? null) {
+            $status = match ($slot?->status) {
                 'confirmed' => 'booked',
                 'held' => 'held',
                 default => 'available',
             };
 
-            $price = $pricingRules[$court->id][$hour]->price ?? 0;
+            $price = $slot?->price ?? 0;
 
             return [$court->id => [
                 'price' => $price,
                 'status' => $status,
-                'is_bookable' => $status === 'available' && $slotStart->greaterThanOrEqualTo($bookingCutoff),
+                'is_bookable' => $status === 'available' && $slotStart->gte($bookingCutoff),
             ]];
         })->toArray();
     }

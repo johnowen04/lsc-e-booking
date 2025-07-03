@@ -8,6 +8,7 @@ use App\DTOs\Shared\InvoiceReference;
 use App\DTOs\Shared\MoneyData;
 use App\Models\Payment;
 use App\Processors\Payment\PaymentProcessor;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
@@ -43,7 +44,7 @@ class HandleMidtransCallback implements ShouldQueue
                 Log::warning("No invoice found for Midtrans callback order_id: {$orderId}");
                 return;
             }
-            
+
             $status = match ($transactionStatus) {
                 'settlement', 'capture' => 'paid',
                 'pending' => 'pending',
@@ -51,8 +52,14 @@ class HandleMidtransCallback implements ShouldQueue
             };
 
             $paidAmount = in_array($transactionStatus, ['settlement', 'capture']) ? $grossAmount : 0;
-            $paidAt = $notification->settlement_time ?? null;
-            $expiresAt = $notification->expiry_time ?? null;
+
+            $paidAt = $status === 'paid' && $notification->settlement_time
+                ? Carbon::parse($notification->settlement_time)
+                : null;
+
+            $expiresAt = $status !== 'paid' && $notification->expiry_time
+                ? Carbon::parse($notification->expiry_time)
+                : null;
 
             $updateData = new UpdatePaymentData(
                 orderId: $orderId,
@@ -65,8 +72,8 @@ class HandleMidtransCallback implements ShouldQueue
                 referenceCode: $transactionId,
                 providerName: 'midtrans',
                 notes: $statusMessage,
-                paidAt: $status === 'paid' ? $paidAt : null,
-                expiresAt: $status !== 'paid' ? $expiresAt : null,
+                paidAt: $paidAt,
+                expiresAt: $expiresAt,
                 invoice: new InvoiceReference(
                     type: get_class($invoice),
                     id: $invoice->id,

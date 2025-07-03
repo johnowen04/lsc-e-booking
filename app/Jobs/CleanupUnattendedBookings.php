@@ -4,12 +4,12 @@ namespace App\Jobs;
 
 use App\Models\Booking;
 use Illuminate\Bus\Queueable;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class CleanupUnattendedBookings implements ShouldQueue
 {
@@ -20,7 +20,7 @@ class CleanupUnattendedBookings implements ShouldQueue
         Log::info('🧹 Starting unattended booking cleanup...');
 
         Booking::query()
-            ->with('slots')
+            ->with('slots.courtScheduleSlot')
             ->where('status', 'confirmed')
             ->where('attendance_status', 'pending')
             ->where('must_check_in_before', '<', now())
@@ -32,13 +32,16 @@ class CleanupUnattendedBookings implements ShouldQueue
                         ]);
 
                         foreach ($booking->slots as $slot) {
-                            $slot->update(['status' => 'no_show']);
-                            $slot->delete();
+                            if ($slot->court_schedule_slot_id && $slot->courtScheduleSlot) {
+                                $slot->courtScheduleSlot->update(['status' => 'available']);
+                            }
+
+                            $slot->update([
+                                'status' => 'no_show',
+                            ]);
                         }
 
-                        $booking->delete();
-
-                        Log::info("🚫 Booking #{$booking->id} marked as no_show and released.");
+                        Log::info("🚫 Booking #{$booking->id} marked as no_show. Slots freed.");
                     });
                 }
             });

@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Processors\Payment\PaymentProcessor;
 use App\Services\BookingService;
 use App\Services\BookingSlotService;
+use App\Services\CourtSlotAvailabilityService;
 use App\Services\InvoiceService;
 use App\Services\PricingRuleService;
 use Database\Seeders\TestDatabaseSeeder;
@@ -28,10 +29,13 @@ class CreateBookingFlowTest extends TestCase
 
         $user = User::factory()->create();
         $court = Court::first();
-
         $date = '2025-07-06';
         $startTime = '08:00:00';
         $endTime = '10:00:00';
+
+        // Ensure court schedule slots exist
+        app(\App\Services\CourtScheduleSlotGeneratorService::class)
+            ->generateSlotsForCourtAndDate($court, Carbon::parse($date));
 
         $formData = [
             'customer_name' => 'John Doe',
@@ -41,17 +45,16 @@ class CreateBookingFlowTest extends TestCase
             'payment_method' => PaymentMethod::CASH->value,
         ];
 
-        $groupedSlots = [
-            [
-                'court_id' => $court->id,
-                'date' => $date,
-                'starts_at' => $startTime,
-                'ends_at' => $endTime,
-                'slots' => $this->buildSlots($court, $date, $startTime, $endTime),
-            ]
-        ];
+        $groupedSlots = [[
+            'court_id' => $court->id,
+            'date' => $date,
+            'starts_at' => $startTime,
+            'ends_at' => $endTime,
+            'slots' => $this->buildSlots($court, $date, $startTime, $endTime),
+        ]];
 
         $flow = new CreateBookingFlow(
+            app(CourtSlotAvailabilityService::class),
             app(BookingService::class),
             app(BookingSlotService::class),
             app(InvoiceService::class),
@@ -80,5 +83,20 @@ class CreateBookingFlowTest extends TestCase
 
         $this->assertEquals('paid', $payment->status);
         $this->assertEquals(PaymentMethod::CASH->value, $payment->method);
+
+        // Verify slot prices
+        $pricingService = app(PricingRuleService::class);
+        $invoice = $payment->paymentables->first()->paymentable->refresh();
+        $booking = $invoice->bookings->first();
+
+        foreach ($booking->slots as $slot) {
+            $expectedPrice = $pricingService->getPriceForHour(
+                $slot->court_id,
+                $slot->start_at->toDateString(),
+                $slot->start_at->copy()
+            );
+
+            $this->assertEquals($expectedPrice, $slot->price);
+        }
     }
 }
