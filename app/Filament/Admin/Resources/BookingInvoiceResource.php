@@ -110,7 +110,7 @@ class BookingInvoiceResource extends Resource
                     ->label('Customer Name'),
 
                 TextEntry::make('customer_email')
-                    ->label('Email'),
+                    ->label('Customer Email'),
 
                 // TextEntry::make('customer_phone')
                 //     ->label('Phone Number'),

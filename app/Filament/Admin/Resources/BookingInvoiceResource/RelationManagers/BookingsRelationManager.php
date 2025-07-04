@@ -107,11 +107,8 @@ class BookingsRelationManager extends RelationManager
                         $this->notify('success', 'Booking marked as attended.');
                         return redirect()->to(BookingResource::getUrl('view', ['record' => $record]));
                     })
-                    ->disabled(
-                        fn($record) => $record->attendance_status === 'attended' ||
-                            ($record->attendance_status === 'pending' && !$record->invoice->isPaid()) //ttl (when invoice is paid and status is pending, only enable if now is after the booking time)
-                    )
-                    ->visible(fn($record) => $record->status === 'confirmed' && $record->attendance_status !== 'attended'),
+                    ->disabled(fn($record) => $record->canAttend()) //ttl (when invoice is paid and status is pending, only enable if now is after the booking time)
+                    ->visible(fn($record) => $record->attendVisible()),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

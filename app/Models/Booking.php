@@ -75,6 +75,18 @@ class Booking extends Model
         return $this->booking_number;
     }
 
+    public function canAttend(): bool
+    {
+        return $this->attendance_status === 'no_show' ||
+            $this->attendance_status === 'attended' ||
+            ($this->attendance_status === 'pending' && !$this->invoice->isPaid());
+    }
+
+    public function attendVisible(): bool
+    {
+        return $this->status === 'confirmed' && $this->attendance_status !== 'attended';
+    }
+
     public function attend(): bool
     {
         if ($this->attendance_status === 'attended') {

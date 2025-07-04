@@ -28,11 +28,8 @@ class ViewBooking extends ViewRecord
                         ->send();
                     return redirect()->to($this->getResource()::getUrl('view', ['record' => $this->record]));
                 })
-                ->disabled(
-                    $this->record->attendance_status === 'attended' ||
-                        ($this->record->attendance_status === 'pending' && !$this->record->invoice->isPaid())
-                )
-                ->visible($this->record->status === 'confirmed'),
+                ->disabled($this->record->canAttend())
+                ->visible($this->record->attendVisible()),
         ];
     }
 }
