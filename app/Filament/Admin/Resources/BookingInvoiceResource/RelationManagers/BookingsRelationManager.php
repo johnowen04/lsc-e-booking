@@ -65,7 +65,7 @@ class BookingsRelationManager extends RelationManager
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
                         'attended' => 'success',
-                        'cancelled' => 'danger',
+                        'no_show' => 'danger',
                         default => 'info',
                     })
                     ->formatStateUsing(fn(string $state): string => Str::headline($state)),
@@ -73,16 +73,16 @@ class BookingsRelationManager extends RelationManager
             ->filters([
                 SelectFilter::make('status')
                     ->options([
-                        'held' => 'Held',
                         'confirmed' => 'Confirmed',
                         'cancelled' => 'Cancelled',
                         'expired' => 'Expired',
+                        'held' => 'Held',
                     ])
                     ->default('confirmed'),
                 SelectFilter::make('attendance_status')
                     ->options([
                         'attended' => 'Attended',
-                        'cancelled' => 'Cancelled',
+                        'no_show' => 'No Show',
                         'pending' => 'Pending',
                     ])
                     ->default('pending')

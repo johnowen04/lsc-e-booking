@@ -99,7 +99,7 @@ class BookingResource extends Resource
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
                         'attended' => 'success',
-                        'cancelled' => 'danger',
+                        'no_show' => 'danger',
                         default => 'info',
                     })
                     ->formatStateUsing(fn(string $state): string => Str::headline($state)),

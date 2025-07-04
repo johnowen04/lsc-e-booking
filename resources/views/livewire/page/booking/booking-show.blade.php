@@ -24,7 +24,7 @@
         @php
             $status = strtolower($booking->status);
             $invoiceStatus = strtolower($booking->invoice->status ?? 'unpaid');
-            $attendanceStatus = strtolower($booking->attendance_status ?? 'unpaid');
+            $attendanceStatus = strtolower($booking->attendance_status ?? 'pending');
 
             $statusClasses = match ($status) {
                 'confirmed' => 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100',
