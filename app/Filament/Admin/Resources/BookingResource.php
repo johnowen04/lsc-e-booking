@@ -31,6 +31,7 @@ class BookingResource extends Resource
     {
         return $form
             ->schema([
+
                 TextInput::make('customer_name')
                     ->label('Customer Name')
                     ->required(),
@@ -40,6 +41,11 @@ class BookingResource extends Resource
                     ->email()
                     ->required()
                     ->dehydrated(),
+
+                Checkbox::make('have_account')
+                    ->label('Already have an account?')
+                    ->default(false)
+                    ->columnSpanFull(),
 
                 // TextInput::make('customer_phone')
                 //     ->label('Phone Number')

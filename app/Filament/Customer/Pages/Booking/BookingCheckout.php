@@ -107,6 +107,7 @@ class BookingCheckout extends Page
             $this->checkBookingConflicts();
             $data = $this->form->getState();
             $data['payment_method'] = PaymentMethod::QRIS->value;
+            $data['customer_id'] = $this->customer?->id ?? null;
 
             $payment = $this->createBookingFlow->execute(
                 $data,

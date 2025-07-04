@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Log;
 class CreateBooking extends CreateRecord
 {
     use InteractsWithBookingCart;
-    
+
     protected static string $resource = BookingResource::class;
 
     protected static string $view = 'filament.admin.resources.booking-resource.pages.create-booking';
@@ -73,6 +73,10 @@ class CreateBooking extends CreateRecord
         try {
             $this->checkBookingConflicts();
 
+            $data['customer_id'] = $data['have_account']
+                ? Customer::where('email', $data['customer_email'])->value('id')
+                : null;
+
             $payment = $this->createBookingFlow->execute(
                 $data,
                 $this->getGroupedSlots(),
@@ -82,6 +86,7 @@ class CreateBooking extends CreateRecord
                     'callback_class' => AdminPaymentStatus::class,
                 ]
             );
+
             $this->clearBookingCart();
             return $payment;
         } catch (\Throwable $th) {

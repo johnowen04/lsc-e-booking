@@ -26,7 +26,7 @@ class CustomerInfoData
     public static function fromArray(array $data): self
     {
         return new self(
-            id: $data['id'] ?? null,
+            id: $data['customer_id'] ?? null,
             name: $data['customer_name'],
             email: $data['customer_email'],
             phone: $data['customer_phone'] ?? null,

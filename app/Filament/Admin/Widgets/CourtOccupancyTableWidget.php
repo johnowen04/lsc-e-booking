@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Widgets;
 
 use App\Models\BookingSlot;
+use App\Models\CourtScheduleSlot;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Grid;
 use Filament\Tables;
@@ -57,9 +58,12 @@ class CourtOccupancyTableWidget extends BaseWidget
     public function table(Table $table): Table
     {
         return $table
-            ->query($this->getTableQuery())
+            ->query(
+                CourtScheduleSlot::with('court')
+                    ->groupBy(['id', 'court_id'])
+            )
             ->columns([
-                Tables\Columns\TextColumn::make('court_name')
+                Tables\Columns\TextColumn::make('court.name')
                     ->label('Court Name')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('total_slots')
@@ -97,11 +101,11 @@ class CourtOccupancyTableWidget extends BaseWidget
                     ->columnSpanFull()
                     ->query(function (Builder $query, array $data) {
                         return $query
-                            ->when($data['from'], fn($q) => $q->where('booking_slots.date', '>=', $data['from']))
-                            ->when($data['to'], fn($q) => $q->where('booking_slots.date', '<=', $data['to']))
+                            ->when($data['from'], fn($q) => $q->where('date', '>=', $data['from']))
+                            ->when($data['to'], fn($q) => $q->where('date', '<=', $data['to']))
                             ->when(
                                 $data['from'] && $data['to'],
-                                fn($q) => $q->whereBetween('booking_slots.date', [$data['from'], $data['to']])
+                                fn($q) => $q->whereBetween('date', [$data['from'], $data['to']])
                             );
                     }),
             ], layout: FiltersLayout::AboveContentCollapsible)
