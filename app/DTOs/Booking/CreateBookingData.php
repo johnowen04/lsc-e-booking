@@ -9,6 +9,7 @@ use Carbon\Carbon;
 class CreateBookingData
 {
     public function __construct(
+        public int $invoiceId,
         public CustomerInfoData $customer,
         public int $courtId,
         public Carbon $date,
@@ -16,7 +17,6 @@ class CreateBookingData
         public Carbon $endsAt,
         public Carbon $mustCheckInBefore,
         public CreatedByData $createdBy,
-        public int $invoiceId,
         public float $totalPrice = 0.0,
         public string $status = 'held',
         public string $attendanceStatus = 'pending',

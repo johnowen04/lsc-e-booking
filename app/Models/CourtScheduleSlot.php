@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CourtScheduleSlot extends Model
 {
@@ -36,5 +37,13 @@ class CourtScheduleSlot extends Model
     {
         return $this->hasOne(BookingSlot::class, 'court_schedule_slot_id')
             ->whereIn('status', ['held', 'confirmed', 'attended']);
+    }
+
+    /**
+     * The pricing rule applied to this slot.
+     */
+    public function pricingRule(): BelongsTo
+    {
+        return $this->belongsTo(PricingRule::class);
     }
 }

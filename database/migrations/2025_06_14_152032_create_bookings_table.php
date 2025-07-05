@@ -28,13 +28,17 @@ return new class extends Migration
             $table->enum('status', ['held', 'confirmed', 'cancelled', 'expired'])->default('held');
             $table->enum('attendance_status', ['pending', 'attended', 'no_show'])->default('pending');
             $table->dateTime('must_check_in_before');
+            $table->text('note')->nullable();
+            $table->string('created_by_type')->nullable();
+            $table->unsignedBigInteger('created_by_id')->nullable();
+            $table->foreignId('rescheduled_from_booking_id')->nullable()->constrained('bookings')->nullOnDelete();
+            $table->text('reschedule_reason')->nullable();
+            $table->string('rescheduled_by_type')->nullable();
+            $table->unsignedBigInteger('rescheduled_by_id')->nullable();
             $table->dateTime('attended_at')->nullable();
             $table->dateTime('cancelled_at')->nullable();
             $table->dateTime('expired_at')->nullable();
-            $table->text('note')->nullable();
-            $table->foreignId('rescheduled_from_booking_id')->nullable()->constrained('bookings')->nullOnDelete();
-            $table->string('created_by_type')->nullable();
-            $table->unsignedBigInteger('created_by_id')->nullable();
+            $table->dateTime('rescheduled_at')->nullable();
             $table->timestamps();
         });
     }

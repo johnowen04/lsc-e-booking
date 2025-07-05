@@ -39,10 +39,10 @@ abstract class AbstractBookingFlow
             customer: $customer,
             amount: $amount,
             status: $status,
-            issuedAt: Carbon::now(),
-            dueAt: Carbon::now()->addMinutes(15),
             isWalkIn: $isWalkIn,
             createdBy: $createdBy,
+            issuedAt: Carbon::now(),
+            dueAt: Carbon::now()->addMinutes(15),
         );
 
         return $this->invoiceService->createBookingInvoice($invoiceDto);
@@ -58,16 +58,16 @@ abstract class AbstractBookingFlow
 
         foreach ($groupedSlots as $group) {
             $bookingDto = new CreateBookingData(
+                invoiceId: $invoice->id,
                 customer: $customer,
                 courtId: $group['court_id'],
                 date: Carbon::parse($group['date']),
                 startsAt: Carbon::parse($group['date'] . ' ' . $group['starts_at']),
                 endsAt: Carbon::parse($group['date'] . ' ' . $group['ends_at']),
                 mustCheckInBefore: Carbon::parse($group['date'] . ' ' . $group['starts_at'])->copy()->addMinutes(15),
+                createdBy: $createdBy,
                 note: $group['note'] ?? null,
                 rescheduledFromBookingId: $group['rescheduled_from_booking_id'] ?? null,
-                invoiceId: $invoice->id,
-                createdBy: $createdBy,
             );
 
             $booking = $this->bookingService->createBooking($bookingDto);

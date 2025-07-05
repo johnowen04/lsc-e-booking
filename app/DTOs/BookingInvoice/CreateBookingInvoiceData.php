@@ -13,9 +13,10 @@ class CreateBookingInvoiceData
         public CustomerInfoData $customer,
         public MoneyData $amount,
         public string $status,
-        public Carbon $issuedAt,
-        public ?Carbon $dueAt,
         public bool $isWalkIn,
         public CreatedByData $createdBy,
+        public Carbon $issuedAt,
+        public ?Carbon $dueAt,
+        public ?int $replacesInvoiceId = null,
     ) {}
 }

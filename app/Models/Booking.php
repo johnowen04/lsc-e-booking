@@ -33,13 +33,17 @@ class Booking extends Model
         'status',
         'attendance_status',
         'must_check_in_before',
+        'note',
+        'created_by_type',
+        'created_by_id',
+        'rescheduled_from_booking_id',
+        'reschedule_reason',
+        'rescheduled_by_type',
+        'rescheduled_by_id',
         'attended_at',
         'cancelled_at',
         'expired_at',
-        'note',
-        'rescheduled_from_booking_id',
-        'created_by_type',
-        'created_by_id',
+        'rescheduled_at',
     ];
 
     protected $casts = [
@@ -47,10 +51,11 @@ class Booking extends Model
         'date' => 'date',
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
+        'must_check_in_before' => 'datetime',
         'attended_at' => 'datetime',
         'cancelled_at' => 'datetime',
         'expired_at' => 'datetime',
-        'must_check_in_before' => 'datetime',
+        'rescheduled_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -85,6 +90,22 @@ class Booking extends Model
     public function attendVisible(): bool
     {
         return $this->status === 'confirmed' && $this->attendance_status !== 'attended';
+    }
+
+    public function canReschedule(): bool
+    {
+        return $this->status === 'confirmed' &&
+            $this->attendance_status === 'pending' &&
+            $this->invoice->isPaid() &&
+            $this->rescheduled_from_booking_id === null;
+    }
+
+    public function rescheduleVisible(): bool
+    {
+        return $this->status === 'confirmed' &&
+            $this->attendance_status === 'pending' &&
+            $this->invoice->isPaid() &&
+            $this->rescheduled_from_booking_id === null;
     }
 
     public function attend(): bool
@@ -155,6 +176,14 @@ class Booking extends Model
     }
 
     /**
+     * The user or customer who created the booking (polymorphic).
+     */
+    public function createdBy(): MorphTo
+    {
+        return $this->morphTo('created_by');
+    }
+
+    /**
      * The booking that this booking was rescheduled from (if any).
      */
     public function rescheduledFrom(): BelongsTo
@@ -172,10 +201,11 @@ class Booking extends Model
     }
 
     /**
-     * The user or customer who created the booking (polymorphic).
+     * The user who rescheduled the booking (polymorphic).
+     * This is used to track who made the rescheduling action.
      */
-    public function createdBy(): MorphTo
+    public function rescheduledBy(): MorphTo
     {
-        return $this->morphTo('created_by');
+        return $this->morphTo('rescheduled_by');
     }
 }

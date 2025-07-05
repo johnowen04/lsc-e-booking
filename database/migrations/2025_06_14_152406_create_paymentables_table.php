@@ -16,6 +16,9 @@ return new class extends Migration
             $table->foreignId('payment_id')->constrained()->cascadeOnDelete();
             $table->string('paymentable_type');
             $table->unsignedBigInteger('paymentable_id');
+            $table->timestamps();
+
+            $table->index(['paymentable_type', 'paymentable_id']);
         });
     }
 

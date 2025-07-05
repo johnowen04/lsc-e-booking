@@ -1,4 +1,4 @@
-@props(['booking'])
+@props(['booking', 'immutable' => false])
 
 @php
     $uid = uniqid('collapse_');
@@ -33,12 +33,16 @@
         </div>
 
         <div class="flex flex-col items-end gap-1">
-            <button wire:click="removeBookingGroup('{{ $booking['group_id'] }}')"
-                class="group transition-colors duration-200 ease-in-out">
-                <x-filament::icon icon="heroicon-o-trash" class="w-5 h-5 text-gray-400 group-hover:text-danger-500" />
-            </button>
+            @if (!$immutable)
+                <button wire:click="removeBookingGroup('{{ $booking['group_id'] }}')"
+                    class="group transition-colors duration-200 ease-in-out">
+                    <x-filament::icon icon="heroicon-o-trash"
+                        class="w-5 h-5 text-gray-400 group-hover:text-danger-500" />
+                </button>
+            @endif
 
-            <button @click="open = !open" class="group transition-colors duration-200 ease-in-out" title="Toggle Slot Details">
+            <button @click="open = !open" class="group transition-colors duration-200 ease-in-out"
+                title="Toggle Slot Details">
                 <template x-if="open">
                     <x-filament::icon icon="heroicon-o-eye-slash"
                         class="w-5 h-5 text-gray-400 group-hover:text-danger-500" />
@@ -71,13 +75,15 @@
                     </div>
 
                     {{-- Delete Button --}}
-                    <div class="ml-auto">
-                        <button wire:click="removeSlot('{{ $slot['id'] }}')"
-                            class="group p-1 rounded hover:bg-red-100 dark:hover:bg-red-900 transition-colors">
-                            <x-filament::icon icon="heroicon-o-x-mark"
-                                class="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                        </button>
-                    </div>
+                    @if (!$immutable)
+                        <div class="ml-auto">
+                            <button wire:click="removeSlot('{{ $slot['id'] }}')"
+                                class="group p-1 rounded hover:bg-red-100 dark:hover:bg-red-900 transition-colors">
+                                <x-filament::icon icon="heroicon-o-x-mark"
+                                    class="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                            </button>
+                        </div>
+                    @endif
                 </li>
             @endforeach
         </ul>

@@ -22,14 +22,14 @@ class InvoiceService
             'customer_name' => $data->customer->name,
             'customer_email' => $data->customer->email,
             'customer_phone' => $data->customer->phone,
-            'total_amount' => $data->amount->total,
             'paid_amount' => $data->amount->paid,
+            'total_amount' => $data->amount->total,
             'status' => $data->status,
-            'issued_at' => $data->issuedAt,
-            'due_at' => $data->dueAt,
             'is_walk_in' => $data->isWalkIn,
             'created_by_type' => $data->createdBy?->type,
             'created_by_id' => $data->createdBy?->id,
+            'issued_at' => $data->issuedAt,
+            'due_at' => $data->dueAt,
         ]);
     }
 

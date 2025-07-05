@@ -14,15 +14,17 @@ class BookingSlotService
     public function checkSlotConflict(
         int $courtId,
         Carbon $start,
-        Carbon $end
+        Carbon $end,
+        array $excludeSlotIds = []
     ): bool {
         return BookingSlot::query()
             ->where('court_id', $courtId)
-            ->whereIn('status', ['confirmed', 'held']) // optional: index on this
+            ->whereIn('status', ['confirmed', 'held'])
             ->where(function ($query) use ($start, $end) {
                 $query->where('start_at', '<', $end)
                     ->where('end_at', '>', $start);
             })
+            ->when(!empty($excludeSlotIds), fn($q) => $q->whereNotIn('id', $excludeSlotIds))
             ->exists();
     }
 

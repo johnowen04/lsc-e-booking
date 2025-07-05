@@ -26,6 +26,8 @@ return new class extends Migration
             $table->string('created_by_type')->nullable();
             $table->unsignedBigInteger('created_by_id')->nullable();
             $table->timestamps();
+
+            $table->index(['status', 'paid_at']);
         });
     }
 

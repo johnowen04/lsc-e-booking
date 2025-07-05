@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\BookingResource\Pages;
 
+use App\Filament\Admin\Pages\Booking\BookingReschedule;
 use App\Filament\Admin\Resources\BookingResource;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -14,6 +15,16 @@ class ViewBooking extends ViewRecord
     public function getHeaderActions(): array
     {
         return [
+            Action::make('reschedule')
+                ->label('Reschedule')
+                ->icon('heroicon-o-calendar')
+                ->color('primary')
+                ->requiresConfirmation()
+                ->action(function () {
+                    return redirect()->to(BookingReschedule::getUrl(['record' => $this->record]));
+                })
+                ->disabled(!$this->record->canReschedule())
+                ->visible($this->record->rescheduleVisible()),
             Action::make('attend')
                 ->label('Attend')
                 ->icon('heroicon-o-check-circle')

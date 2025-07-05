@@ -39,11 +39,11 @@ class BookingInvoice extends Model implements PayableInterface
 
     protected $casts = [
         'uuid' => 'string',
+        'total_amount' => 'decimal:2',
         'issued_at' => 'datetime',
         'due_at' => 'datetime',
         'cancelled_at' => 'datetime',
         'expired_at' => 'datetime',
-        'total_amount' => 'decimal:2',
     ];
 
     public function isPaid(): bool

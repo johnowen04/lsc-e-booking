@@ -9,6 +9,7 @@ use App\Models\Booking;
 use Filament\Forms;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Infolists\Components\TextEntry;
@@ -31,21 +32,24 @@ class BookingResource extends Resource
     {
         return $form
             ->schema([
-
                 TextInput::make('customer_name')
                     ->label('Customer Name')
-                    ->required(),
+                    ->required()
+                    ->dehydrated()
+                    ->disabled(fn($operation): bool => $operation === 'edit'),
 
                 TextInput::make('customer_email')
                     ->label('Customer Email')
                     ->email()
                     ->required()
-                    ->dehydrated(),
+                    ->dehydrated()
+                    ->disabled(fn($operation): bool => $operation === 'edit'),
 
                 Checkbox::make('have_account')
                     ->label('Already have an account?')
                     ->default(false)
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
+                    ->hidden(fn($operation): bool => $operation === 'edit'),
 
                 // TextInput::make('customer_phone')
                 //     ->label('Phone Number')
@@ -57,12 +61,20 @@ class BookingResource extends Resource
                     ->options(PaymentMethod::toArray())
                     ->default('cash')
                     ->required()
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
+                    ->hidden(fn($operation): bool => $operation === 'edit'),
 
                 Checkbox::make('is_paid_in_full')
                     ->label('Paid in Full')
                     ->default(true)
-                    ->live(),
+                    ->live()
+                    ->hidden(fn($operation): bool => $operation === 'edit'),
+                
+                Textarea::make('reschedule_reason')
+                    ->label('Reschedule Reason')
+                    ->columnSpanFull()
+                    ->rows(3)
+                    ->hidden(fn($operation): bool => $operation === 'create'),
             ]);
     }
 

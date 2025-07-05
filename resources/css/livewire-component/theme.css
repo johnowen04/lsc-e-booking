@@ -102,6 +102,21 @@
         @apply border-r-0;
     }
 
+    .booking-slot-grid original-booking {
+        background-color: #bfdbfe; /* light blue */
+        color: #1e3a8a; /* dark blue text */
+        font-weight: bold;
+        position: relative;
+    }
+
+    .booking-slot-grid original-booking::after {
+        content: "🔄";
+        position: absolute;
+        top: 0.2rem;
+        right: 0.4rem;
+        font-size: 0.9rem;
+    }
+
     /* Booking Date Navigator */
     .booking-date-navigator .range-controls {
         @apply flex justify-between mb-2 items-center;

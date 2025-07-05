@@ -29,7 +29,41 @@ trait InteractsWithBookingCart
         );
     }
 
-    public function checkBookingConflicts(): void
+    public function isRescheduled($originalBooking): void
+    {
+        $originalBookingKey = "{$originalBooking->court_id}_{$originalBooking->date->format('Y-m-d')}_{$originalBooking->starts_at->format('H:i')}_{$originalBooking->ends_at->format('H:i')}";
+
+        $groups = $this->getGroupedSlots();
+
+        if ($groups->isEmpty()) {
+            throw ValidationException::withMessages(['cart' => 'Cart is empty.']);
+        }
+
+        foreach ($groups as $group) {
+            $courtId = $group['court_id'];
+            $courtName = $group['court_name'] ?? "Court #{$courtId}";
+            $date = $group['date'];
+
+            $start = Carbon::parse("{$date} {$group['slots']->min('hour')}:00");
+            $end = Carbon::parse("{$date} {$group['slots']->max('hour')}:00")->addHour();
+
+            $slotKey = "{$courtId}_{$date}_{$start->format('H:i')}_{$end->format('H:i')}";
+
+            if ($originalBookingKey === $slotKey) {
+                throw ValidationException::withMessages([
+                    "The new booking is the same as the original booking for {$courtName} on {$date} at {$start->format('H:i')} - {$end->format('H:i')}."
+                ]);
+            }
+        }
+    }
+
+    public function checkRescheduleConflicts($originalBooking): void
+    {
+        $this->isRescheduled($originalBooking);
+        $this->checkBookingConflicts($originalBooking->slots->pluck('id')->all());
+    }
+
+    public function checkBookingConflicts(array $excludeSlotIds = []): void
     {
         $groups = $this->getGroupedSlots();
 
@@ -45,7 +79,7 @@ trait InteractsWithBookingCart
             $start = Carbon::parse("{$date} {$group['slots']->min('hour')}:00");
             $end = Carbon::parse("{$date} {$group['slots']->max('hour')}:00")->addHour();
 
-            if ($this->checkSlotConflict($courtId, $start, $end)) {
+            if ($this->checkSlotConflict($courtId, $start, $end, $excludeSlotIds)) {
                 throw ValidationException::withMessages([
                     'cart' => "One or more selected slots for {$courtName} on {$date} are already booked.",
                 ]);
@@ -199,9 +233,9 @@ trait InteractsWithBookingCart
     /**
      * Override this in your component to implement actual logic.
      */
-    protected function checkSlotConflict(int $courtId, Carbon $start, Carbon $end): bool
+    protected function checkSlotConflict(int $courtId, Carbon $start, Carbon $end, array $excludeSlotIds = []): bool
     {
-        return $this->getBookingSlotService()->checkSlotConflict($courtId, $start, $end);
+        return $this->getBookingSlotService()->checkSlotConflict($courtId, $start, $end, $excludeSlotIds);
     }
 
     protected function getBookingSlotService(): BookingSlotService

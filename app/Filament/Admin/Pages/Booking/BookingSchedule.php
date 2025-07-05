@@ -14,7 +14,7 @@ class BookingSchedule extends Page
     protected static string $view = 'filament.admin.pages.booking.booking-schedule';
     protected static bool $shouldRegisterNavigation = false;
 
-    public function getNaviagationLabel(): string
+    public function getHeading(): string
     {
         return "Schedule";
     }

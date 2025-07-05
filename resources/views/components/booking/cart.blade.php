@@ -2,7 +2,6 @@
     'groupedSlots' => [],
     'cartTotal' => 0,
     'showActions' => false,
-    'showLink' => false,
     'checkoutAction' => null,
 ])
 
@@ -22,14 +21,6 @@
         <div class="cart-empty cart-empty-state flex-grow flex flex-col justify-center items-center text-center">
             <x-filament::icon icon="heroicon-o-shopping-bag" class="empty-icon" />
             <p class="empty-text empty-message">Your cart is empty</p>
-
-            @if ($showLink)
-                <div class="mt-4">
-                    <x-filament::button tag="a" href="{{ route('filament.admin.pages.booking-schedule') }}">
-                        Select time slots
-                    </x-filament::button>
-                </div>
-            @endif
         </div>
     @else
         <div class="cart-body flex flex-col flex-grow overflow-hidden">
