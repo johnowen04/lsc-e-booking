@@ -9,7 +9,7 @@
     }
 
     .booking-slot-grid .slot-table {
-        @apply w-full table-auto min-w-full border-collapse text-sm text-center border-collapse;
+        @apply w-full table-auto min-w-full border-collapse text-sm text-center;
     }
 
     .booking-slot-grid thead th {
@@ -61,7 +61,7 @@
         @apply text-xs text-zinc-500 dark:text-zinc-400;
     }
 
-    /* Slot States */
+    /* ───── Slot Status States ───── */
     .booking-slot-grid .booked {
         @apply bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300 cursor-not-allowed;
     }
@@ -78,7 +78,7 @@
         @apply cursor-pointer hover:bg-sky-100 dark:hover:bg-sky-800;
     }
 
-    /* Dynamic Label States */
+    /* ───── Dynamic Visual States ───── */
     .booking-slot-grid .in-cart {
         @apply text-blue-600 dark:text-blue-400;
     }
@@ -91,30 +91,26 @@
         @apply text-emerald-600 dark:text-emerald-400;
     }
 
+    .booking-slot-grid .original {
+        @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300 font-bold relative;
+    }
+
+    .booking-slot-grid .original::after {
+        position: absolute;
+        top: 0.25rem;
+        right: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    /* ───── Table Cleanup ───── */
     .booking-slot-grid th,
     .booking-slot-grid td {
         @apply border-r border-zinc-200 dark:border-zinc-700;
     }
 
-    /* Optional: remove last column's border for cleaner look */
     .booking-slot-grid th:last-child,
     .booking-slot-grid td:last-child {
         @apply border-r-0;
-    }
-
-    .booking-slot-grid original-booking {
-        background-color: #bfdbfe; /* light blue */
-        color: #1e3a8a; /* dark blue text */
-        font-weight: bold;
-        position: relative;
-    }
-
-    .booking-slot-grid original-booking::after {
-        content: "🔄";
-        position: absolute;
-        top: 0.2rem;
-        right: 0.4rem;
-        font-size: 0.9rem;
     }
 
     /* Booking Date Navigator */

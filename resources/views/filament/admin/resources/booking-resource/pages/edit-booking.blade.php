@@ -4,7 +4,7 @@
         <div class="w-full lg:w-1/2 pt-0">
             <x-filament::section>
                 <x-slot name="heading">Schedules</x-slot>
-                <livewire:page.booking.reschedule.booking-reschedule-cart :groupedSlots="$groupedSlots->toArray()" :rescheduleUrl="'https://google.com'"
+                <livewire:page.booking.reschedule.booking-reschedule-cart :rescheduleUrl="'https://google.com'"
                     :showActions="false" :original-booking="$originalBooking" :immutable="true" />
             </x-filament::section>
         </div>

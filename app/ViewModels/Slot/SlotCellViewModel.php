@@ -15,7 +15,9 @@ class SlotCellViewModel
         public readonly bool $isEnd,
         public readonly bool $isInSelection,
         public readonly bool $isDisabled,
+        public readonly bool $isOriginal,
         public readonly string $label,
         public readonly array $classes,
+        public ?string $pricingRuleName = null,
     ) {}
 }

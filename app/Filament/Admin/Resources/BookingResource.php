@@ -72,6 +72,7 @@ class BookingResource extends Resource
                 
                 Textarea::make('reschedule_reason')
                     ->label('Reschedule Reason')
+                    ->required(fn($operation): bool => $operation === 'edit')
                     ->columnSpanFull()
                     ->rows(3)
                     ->hidden(fn($operation): bool => $operation === 'create'),

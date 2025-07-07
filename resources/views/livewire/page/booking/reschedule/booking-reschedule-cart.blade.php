@@ -26,7 +26,7 @@
     </div>
 
     {{-- 🆕 New Booking Slots --}}
-    @forelse ($groupedSlots as $booking)
+    @forelse ($this->getGroupedSlots() as $booking)
         <div class="flex items-start gap-4 mt-6">
             <div class="mt-1 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-gray-800"></div>
             <div class="flex-1">

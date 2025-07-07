@@ -3,14 +3,13 @@
 namespace App\Actions\Booking;
 
 use App\DTOs\Booking\CreateBookingData;
-use App\DTOs\BookingCart\SelectedSlot;
 use App\DTOs\BookingInvoice\CreateBookingInvoiceData;
-use App\DTOs\BookingSlot\CreateBookingSlotData;
 use App\DTOs\Payment\CreatePaymentData;
 use App\DTOs\Shared\CreatedByData;
 use App\DTOs\Shared\CustomerInfoData;
 use App\DTOs\Shared\InvoiceReference;
 use App\DTOs\Shared\MoneyData;
+use App\Factories\BookingSlot\SlotDtoFactory;
 use App\Models\Booking;
 use App\Models\BookingInvoice;
 use App\Models\Payment;
@@ -34,6 +33,7 @@ class CreateBookingFlow
         protected InvoiceService $invoiceService,
         protected PricingRuleService $pricingRuleService,
         protected PaymentProcessor $paymentProcessor,
+        protected SlotDtoFactory $slotDtoFactory,
     ) {}
 
     public function execute(array $formData, Collection $selectedSlotGroups, ?array $options = null): Payment
@@ -144,38 +144,9 @@ class CreateBookingFlow
         return $bookings;
     }
 
-    protected function createBookingSlots(Booking $booking, Collection $slotPayloads, int $courtId): array
+    protected function createBookingSlots(Booking $booking, Collection $slots, int $courtId): array
     {
-        $slotDtos = $slotPayloads->map(function (SelectedSlot $slot) use ($booking, $courtId) {
-            $hour = Carbon::createFromTimeString("{$slot->hour}:00");
-
-            $pricingRule = $this->pricingRuleService->getPricingRuleForHour(
-                $courtId,
-                $slot->date,
-                $hour
-            );
-
-            $startHour = Carbon::parse("{$slot->date} {$slot->hour}:00");
-            $date = Carbon::parse($slot->date);
-
-            $courtScheduleSlot = $this->courtSlotAvailabilityService->reserve(
-                $courtId,
-                $date,
-                $startHour
-            );
-
-            return new CreateBookingSlotData(
-                bookingId: $booking->id,
-                courtId: $courtId,
-                date: Carbon::parse($slot->date),
-                startAt: $startHour,
-                endAt: $startHour->copy()->addHour(),
-                price: $pricingRule->price_per_hour,
-                pricingRuleId: $pricingRule->id ?? null,
-                courtScheduleSlotId: $courtScheduleSlot->id,
-            );
-        })->toArray();
-
+        $slotDtos = $this->slotDtoFactory->fromSelectedSlots($booking, $slots, $courtId);
         return $this->bookingSlotService->createBookingSlots($slotDtos);
     }
 

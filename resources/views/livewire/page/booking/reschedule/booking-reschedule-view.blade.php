@@ -23,8 +23,7 @@
 
         {{-- 🎯 Booking Slot Grid (pass original slot IDs to highlight) --}}
         <div :class="{ 'opacity-40 pointer-events-none filter blur-sm': showCartDrawer }">
-            <livewire:page.booking.reschedule.booking-reschedule-slot-grid wire:model.live="selectedDate"
-                mode="reschedule" :original-booking="$originalBooking" />
+            <livewire:page.booking.reschedule.booking-reschedule-slot-grid wire:model.live="selectedDate" :original-booking="$originalBooking" />
         </div>
 
         {{-- 🛒 Floating Cart Toggle --}}

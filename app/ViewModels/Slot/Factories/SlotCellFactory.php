@@ -12,7 +12,9 @@ class SlotCellFactory
         int $selectedCourtId,
         ?int $selectedStartHour,
         ?int $hoverHour,
-        bool $inCart
+        bool $inCart,
+        bool $isOriginal = false,
+        array $allowedPrices = [],
     ): SlotCellViewModel {
         $hour = $slotData->hour;
         $isStart = $selectedCourtId === $slotData->courtId && $selectedStartHour === $hour;
@@ -25,7 +27,18 @@ class SlotCellFactory
 
         $isEnd = $isInSelection && $hour === $hoverHour;
 
-        $isDisabled = $slotData->status !== 'available' || $inCart || !$slotData->isBookable;
+        $isAllowedPrice = empty($allowedPrices) || in_array($slotData->price, $allowedPrices);
+
+        $isDisabled = $isOriginal
+            ? false
+            : (
+                $slotData->status !== 'available'
+                || $inCart
+                || !$slotData->isBookable
+                || !$isAllowedPrice
+            );
+
+        $pricingRuleName = $slotData->pricingRuleName ?? null;
 
         return new SlotCellViewModel(
             courtId: $slotData->courtId,
@@ -38,8 +51,10 @@ class SlotCellFactory
             isEnd: $isEnd,
             isInSelection: $isInSelection,
             isDisabled: $isDisabled,
-            label: self::makeSlotLabel($slotData->status, $inCart, $isStart, $isEnd, $isInSelection, $isDisabled),
-            classes: self::makeSlotClasses($slotData->status, $inCart, $isStart, $isEnd, $isInSelection, $isDisabled),
+            isOriginal: $isOriginal,
+            label: self::makeSlotLabel($slotData->status, $inCart, $isStart, $isEnd, $isInSelection, $isDisabled, $isOriginal),
+            classes: self::makeSlotClasses($slotData->status, $inCart, $isStart, $isEnd, $isInSelection, $isDisabled, $isOriginal),
+            pricingRuleName: $pricingRuleName,
         );
     }
 
@@ -49,17 +64,19 @@ class SlotCellFactory
         bool $isStart,
         bool $isEnd,
         bool $isInSelection,
-        bool $isDisabled
+        bool $isDisabled,
+        bool $isOriginal,
     ): string {
         return match (true) {
-            $status === 'booked' => 'Booked',
-            $status === 'held' => 'Held',
-            $isDisabled && $inCart => 'In Cart',
-            $isDisabled => 'Unavailable',
             $isStart => 'Start',
             $isEnd => 'End',
             $inCart => 'In Cart',
             $isInSelection => 'Picked',
+            $isOriginal => 'Book (Original)',
+            $status === 'booked' => 'Booked',
+            $status === 'held' => 'Held',
+            $isDisabled && $inCart => 'In Cart',
+            $isDisabled => 'Unavailable',
             default => 'Book',
         };
     }
@@ -70,10 +87,12 @@ class SlotCellFactory
         bool $isStart,
         bool $isEnd,
         bool $isInSelection,
-        bool $isDisabled
+        bool $isDisabled,
+        bool $isOriginal,
     ): array {
         $classes = [$status];
 
+        if ($isOriginal) $classes[] = 'original';
         if ($inCart) $classes[] = 'in-cart';
         if ($isInSelection) $classes[] = 'in-selection';
         if ($isStart || $isEnd) $classes[] = 'is-range-endpoint';

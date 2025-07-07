@@ -19,6 +19,7 @@ readonly class SlotData
         public int $price,
         public string $status,
         public bool $isBookable,
+        public string $pricingRuleName = '',
     ) {}
 
     public static function fromScheduleSlot(Court $court, Carbon $slotStart, ?CourtScheduleSlot $slot, Carbon $cutoff): self
@@ -39,6 +40,7 @@ readonly class SlotData
             price: $slot?->price ?? 0,
             status: $status,
             isBookable: $status === 'available' && $slotStart->gte($cutoff),
+            pricingRuleName: $slot?->pricingRule?->name ?? '',
         );
     }
 
@@ -54,6 +56,7 @@ readonly class SlotData
             price: $selectedSlot->price,
             status: $selectedSlot->status ?? 'available',
             isBookable: $selectedSlot->isBookable ?? true,
+            pricingRuleName: $selectedSlot->pricingRuleName ?? '',
         );
     }
 
@@ -69,6 +72,7 @@ readonly class SlotData
             price: $data['price'],
             status: $data['status'],
             isBookable: $data['is_bookable'],
+            pricingRuleName: $data['pricing_rule_name'] ?? '',
         );
     }
 
@@ -84,6 +88,7 @@ readonly class SlotData
             'price' => $this->price,
             'status' => $this->status,
             'is_bookable' => $this->isBookable,
+            'pricing_rule_name' => $this->pricingRuleName,
         ];
     }
 

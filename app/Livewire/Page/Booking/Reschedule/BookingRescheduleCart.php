@@ -11,7 +11,7 @@ class BookingRescheduleCart extends Component
 {
     use InteractsWithBookingCart;
 
-    public array $groupedSlots = [];
+    protected $groupedSlots;
     public int $cartTotal = 0;
     public string $rescheduleUrl = '';
     public bool $showActions = true;
@@ -44,7 +44,7 @@ class BookingRescheduleCart extends Component
 
     public function refreshCart(): void
     {
-        $this->groupedSlots = $this->getGroupedSlots()->toArray();
+        $this->groupedSlots = $this->getGroupedSlots();
         $this->cartTotal = $this->calculateCartTotal();
     }
 

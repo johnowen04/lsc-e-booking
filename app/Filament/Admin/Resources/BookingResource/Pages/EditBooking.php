@@ -6,7 +6,6 @@ use App\Actions\Booking\RescheduleBookingFlow;
 use App\Filament\Admin\Pages\Booking\BookingReschedule;
 use App\Filament\Admin\Resources\BookingResource;
 use App\Traits\InteractsWithBookingCart;
-use Carbon\Carbon;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Database\Eloquent\Model;
@@ -21,7 +20,6 @@ class EditBooking extends EditRecord
     protected static string $view = 'filament.admin.resources.booking-resource.pages.edit-booking';
 
     public $originalBooking;
-    public $groupedSlots;
     public $newBooking;
 
     protected RescheduleBookingFlow $rescheduleBookingFlow;
@@ -64,7 +62,6 @@ class EditBooking extends EditRecord
     {
         parent::mount($record);
         $this->originalBooking = $this->record;
-        $this->groupedSlots = $this->getGroupedSlots();
     }
 
     protected function handleRecordUpdate(Model $record, array $data): Model
