@@ -38,11 +38,7 @@
                                         $slotData = $row['slots'][$court->id];
                                         $status = $slotData['status'];
                                         $isBookable = $slotData['is_bookable'] ?? false;
-                                        $inCart = collect($this->getCart())->contains(
-                                            fn($slot) => $slot['date'] === $selectedDate &&
-                                                $slot['court_id'] === $court->id &&
-                                                $slot['hour'] === $row['hour'],
-                                        );
+                                        $inCart = $this->isSlotInCart($selectedDate, $court->id, $row['hour']);
                                         $isStart =
                                             $selectedCourtId === $court->id && $selectedStartHour === $row['hour'];
                                         $isInSelection =

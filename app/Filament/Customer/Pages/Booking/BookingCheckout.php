@@ -27,9 +27,10 @@ class BookingCheckout extends Page
 
     protected static bool $shouldRegisterNavigation = false;
 
-    public $groupedSlots;
     public $cartTotal;
+
     public ?array $data = [];
+
     public ?Customer $customer = null;
 
     protected CreateBookingFlow $createBookingFlow;
@@ -41,7 +42,7 @@ class BookingCheckout extends Page
 
     public function mount(): void
     {
-        $this->fillFromCart();
+        $this->updateTotal();
         $this->customer = filament()->auth()?->user();
         $this->form->fill();
     }
@@ -49,14 +50,13 @@ class BookingCheckout extends Page
     protected function getListeners(): array
     {
         return [
-            'slotsAddedToCart' => 'fillFromCart',
-            'cartItemRemoved' => 'fillFromCart'
+            'slotsAddedToCart' => 'updateTotal',
+            'cartItemRemoved' => 'updateTotal'
         ];
     }
 
-    public function fillFromCart(): void
+    public function updateTotal(): void
     {
-        $this->groupedSlots = $this->getGroupedSlots();
         $this->cartTotal = $this->calculateCartTotal();
     }
 

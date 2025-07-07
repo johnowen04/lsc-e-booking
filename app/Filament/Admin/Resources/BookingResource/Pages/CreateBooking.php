@@ -22,7 +22,6 @@ class CreateBooking extends CreateRecord
 
     protected static string $view = 'filament.admin.resources.booking-resource.pages.create-booking';
 
-    public $groupedSlots;
     public $cartTotal;
 
     protected CreateBookingFlow $createBookingFlow;
@@ -35,7 +34,7 @@ class CreateBooking extends CreateRecord
     public function mount(): void
     {
         parent::mount();
-        $this->fillFromCart();
+        $this->updateTotal();
     }
 
     public function getRedirectUrl(): string
@@ -57,19 +56,19 @@ class CreateBooking extends CreateRecord
     protected function getListeners(): array
     {
         return [
-            'slotsAddedToCart' => 'fillFromCart',
-            'cartItemRemoved' => 'fillFromCart'
+            'cartItemRemoved' => 'updateTotal',
         ];
     }
 
-    public function fillFromCart(): void
+    public function updateTotal(): void
     {
-        $this->groupedSlots = $this->getGroupedSlots();
         $this->cartTotal = $this->calculateCartTotal();
     }
 
     protected function handleRecordCreation(array $data): Model
     {
+        dd($data, $this->getGroupedSlots());
+
         try {
             $this->checkBookingConflicts();
 

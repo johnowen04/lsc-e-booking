@@ -19,7 +19,7 @@ class BookingSlotGrid extends Component
     #[Modelable]
     public string $selectedDate;
     public $courts;
-    public $slots = [];
+    public $slots;
 
     public $selectedCourtId = null;
     public $selectedStartHour = null;
@@ -152,16 +152,6 @@ class BookingSlotGrid extends Component
             }
         }
         return false;
-    }
-
-    public function isSlotInCart($date, $courtId, $hour): bool
-    {
-        return collect($this->getCart())->contains(
-            fn($slot) =>
-            $slot['date'] === $date &&
-                $slot['court_id'] === $courtId &&
-                $slot['hour'] === $hour
-        );
     }
 
     public function selectSlot($courtId, $hour)

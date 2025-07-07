@@ -4,7 +4,7 @@
         <div class="w-full lg:w-1/2 pt-0">
             <x-filament::section>
                 <x-slot name="heading">Schedules</x-slot>
-                <livewire:page.booking.booking-cart :groupedSlots="$groupedSlots->toArray()" :cartTotal="$cartTotal" :showActions="false" />
+                <livewire:page.booking.booking-cart :showActions="false" />
             </x-filament::section>
         </div>
 

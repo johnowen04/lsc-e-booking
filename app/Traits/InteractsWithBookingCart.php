@@ -2,6 +2,8 @@
 
 namespace App\Traits;
 
+use App\DTOs\BookingCart\SelectedSlot;
+use App\DTOs\BookingCart\SelectedSlotGroup;
 use App\Models\Customer;
 use App\Models\User;
 use App\Services\BookingSlotService;
@@ -22,45 +24,70 @@ trait InteractsWithBookingCart
     public function isSlotInCart(string $date, int $courtId, int $hour): bool
     {
         return collect($this->getCart())->contains(
-            fn($slot) =>
-            $slot['court_id'] === $courtId &&
-                $slot['date'] === $date &&
-                $slot['hour'] === $hour
+            fn(SelectedSlot $slot) => $slot->date === $date && $slot->courtId === $courtId && $slot->hour === $hour
         );
     }
 
-    public function isRescheduled($originalBooking): void
+    public function calculateCartTotal(): int
     {
-        $originalBookingKey = "{$originalBooking->court_id}_{$originalBooking->date->format('Y-m-d')}_{$originalBooking->starts_at->format('H:i')}_{$originalBooking->ends_at->format('H:i')}";
-
-        $groups = $this->getGroupedSlots();
-
-        if ($groups->isEmpty()) {
-            throw ValidationException::withMessages(['cart' => 'Cart is empty.']);
-        }
-
-        foreach ($groups as $group) {
-            $courtId = $group['court_id'];
-            $courtName = $group['court_name'] ?? "Court #{$courtId}";
-            $date = $group['date'];
-
-            $start = Carbon::parse("{$date} {$group['slots']->min('hour')}:00");
-            $end = Carbon::parse("{$date} {$group['slots']->max('hour')}:00")->addHour();
-
-            $slotKey = "{$courtId}_{$date}_{$start->format('H:i')}_{$end->format('H:i')}";
-
-            if ($originalBookingKey === $slotKey) {
-                throw ValidationException::withMessages([
-                    "The new booking is the same as the original booking for {$courtName} on {$date} at {$start->format('H:i')} - {$end->format('H:i')}."
-                ]);
-            }
-        }
+        return $this->getGroupedSlots()->sum(fn(SelectedSlotGroup $group) => $group->price);
     }
 
-    public function checkRescheduleConflicts($originalBooking): void
+    public function addSlotsToCart(string $date, int $courtId, ?string $courtName, int $startHour, ?int $endHour = null): void
     {
-        $this->isRescheduled($originalBooking);
-        $this->checkBookingConflicts($originalBooking->slots->pluck('id')->all());
+        $cart = $this->getCart();
+        $end = $endHour !== null && $endHour > $startHour ? $endHour : $startHour;
+
+        for ($hour = $startHour; $hour <= $end; $hour++) {
+            $cart[] = $this->buildSlotData($date, $courtId, $courtName, $hour);
+        }
+
+        $this->saveCart($cart);
+        $this->fireEvent($this->eventSlotsAdded);
+    }
+
+    public function removeSlot(string $slotId): void
+    {
+        $filtered = collect($this->getCart())
+            ->reject(fn(SelectedSlot $slot) => $slot->id === $slotId)
+            ->values()
+            ->all();
+
+        $this->saveCart($filtered);
+        $this->fireEvent($this->eventItemRemoved);
+    }
+
+    public function removeBookingGroup(string $groupId): void
+    {
+        $group = $this->getGroupedSlots()->first(
+            fn(SelectedSlotGroup $group) => $group->groupId === $groupId
+        );
+
+        if (! $group) {
+            logger()->warning("Group [$groupId] not found in cart");
+            return;
+        }
+
+        $idsToRemove = $group->slots->pluck('id')->filter()->values()->all();
+
+        if (empty($idsToRemove)) {
+            logger()->warning("No slots to remove for group [$groupId]");
+            return;
+        }
+
+        $filtered = collect($this->getCart())
+            ->reject(fn(SelectedSlot $slot) => in_array($slot->id, $idsToRemove, true))
+            ->values()
+            ->all();
+
+        $this->saveCart($filtered);
+        $this->fireEvent($this->eventItemRemoved);
+    }
+
+    public function clearBookingCart(): void
+    {
+        $this->saveCart([]);
+        $this->fireEvent($this->eventCartCleared);
     }
 
     public function checkBookingConflicts(array $excludeSlotIds = []): void
@@ -72,167 +99,101 @@ trait InteractsWithBookingCart
         }
 
         foreach ($groups as $group) {
-            $courtId = $group['court_id'];
-            $courtName = $group['court_name'] ?? "Court #{$courtId}";
-            $date = $group['date'];
+            $start = Carbon::parse("{$group->date} {$group->slots->min('hour')}:00");
+            $end = Carbon::parse("{$group->date} {$group->slots->max('hour')}:00")->addHour();
 
-            $start = Carbon::parse("{$date} {$group['slots']->min('hour')}:00");
-            $end = Carbon::parse("{$date} {$group['slots']->max('hour')}:00")->addHour();
-
-            if ($this->checkSlotConflict($courtId, $start, $end, $excludeSlotIds)) {
+            if ($this->checkSlotConflict($group->courtId, $start, $end, $excludeSlotIds)) {
                 throw ValidationException::withMessages([
-                    'cart' => "One or more selected slots for {$courtName} on {$date} are already booked.",
+                    'cart' => "One or more selected slots for {$group->courtName} on {$group->date} are already booked.",
                 ]);
             }
         }
     }
 
-    public function calculateCartTotal(): int
-    {
-        return $this->getGroupedSlots()
-            ->sum(fn($group) => $group['price']);
-    }
-
-    public function addSlotsToCart(string $date, int $courtId, ?string $courtName, int $startHour, ?int $endHour = null): void
-    {
-        $cart = $this->getCart();
-        $isRange = $endHour !== null && $endHour > $startHour;
-        $end = $isRange ? $endHour : $startHour;
-
-        for ($hour = $startHour; $hour <= $end; $hour++) {
-            $cart[] = $this->buildSlotData($date, $courtId, $courtName, $hour);
-        }
-
-        $this->saveCart($cart);
-        $this->fireEvent($this->eventSlotsAdded);
-    }
-
     public function getGroupedSlots(): Collection
     {
         return collect($this->getCart())
-            ->sortBy(['court_id', 'date', 'hour'])
-            ->groupBy(fn($slot) => "{$slot['court_id']}_{$slot['date']}")
-            ->flatMap(function ($grouped) {
-                $grouped = $grouped->sortBy('hour')->values();
-                $blocks = [];
-                $currentBlock = [$grouped->first()];
-
-                for ($i = 1; $i < $grouped->count(); $i++) {
-                    $prev = $grouped[$i - 1];
-                    $curr = $grouped[$i];
-
-                    if ($curr['hour'] === $prev['hour'] + 1) {
-                        $currentBlock[] = $curr;
-                    } else {
-                        $blocks[] = collect($currentBlock);
-                        $currentBlock = [$curr];
-                    }
-                }
-
-                $blocks[] = collect($currentBlock);
-
-                return collect($blocks)->map(function ($block) {
-                    $first = $block->first();
-                    $last = $block->last();
-
-                    return [
-                        'group_id'        => md5("{$first['court_id']}_{$first['date']}_{$first['hour']}_{$last['hour']}"),
-                        'court_id'        => $first['court_id'],
-                        'court_name'      => $first['court_name'],
-                        'date'            => $first['date'],
-                        'formatted_date'  => $first['formatted_date'],
-                        'starts_at'       => Carbon::parse("{$first['date']} {$first['hour']}:00")->format('H:i'),
-                        'ends_at'         => Carbon::parse("{$last['date']} {$last['hour']}:00")->addHour()->format('H:i'),
-                        'duration'        => $block->count(),
-                        'slots'           => $block->values(),
-                        'price'           => $block->sum('price'),
-                    ];
-                });
-            })
+            ->sortBy(fn($slot) => [$slot->courtId, $slot->date, $slot->hour])
+            ->groupBy(fn($slot) => "{$slot->courtId}_{$slot->date}")
+            ->flatMap(fn($group) => $this->groupConsecutiveSlots($group))
             ->values();
     }
 
-    public function removeSlot(string $slotId): void
-    {
-        $cart = collect($this->getCart());
-        $updated = $cart->reject(fn($slot) => $slot['id'] === $slotId)->values()->toArray();
-
-        $this->saveCart($updated);
-        $this->fireEvent($this->eventItemRemoved);
-    }
-
-    public function removeBookingGroup(string $groupId): void
-    {
-        $slots = $this->getGroupedSlots();
-        $group = $slots->firstWhere('group_id', $groupId);
-
-        if (! $group) return;
-
-        $idsToRemove = collect($group['slots'])->pluck('id')->all();
-
-        $cart = collect($this->getCart())
-            ->reject(fn($slot) => in_array($slot['id'], $idsToRemove))
-            ->values()
-            ->toArray();
-
-        $this->saveCart($cart);
-        $this->fireEvent($this->eventItemRemoved);
-    }
-
-    public function clearBookingCart(): void
-    {
-        $this->saveCart([]);
-        $this->fireEvent($this->eventCartCleared);
-    }
-
-    // ───── Protected Methods ─────
-
-    protected function getCartSessionKey(): string
-    {
-        $key = match (true) {
-            filament()->auth()->user() instanceof Customer => 'customer_booking_cart_' . filament()->auth()->id(),
-            filament()->auth()->user() instanceof User => 'admin_booking_cart_' . filament()->auth()->id(),
-            default => 'guest_booking_cart'
-        };
-
-        return $key;
-    }
+    // ───── Session / Persistence ─────
 
     protected function getCart(): array
     {
-        return Session::get($this->getCartSessionKey(), []);
+        return collect(Session::get($this->getCartSessionKey(), []))
+            ->map(fn($data) => $data instanceof SelectedSlot ? $data : SelectedSlot::fromArray($data))
+            ->all();
     }
 
     protected function saveCart(array $cart): void
     {
-        Session::put($this->getCartSessionKey(), $cart);
+        $serialized = array_map(
+            fn($slot) => $slot instanceof SelectedSlot ? $slot->toArray() : $slot,
+            $cart
+        );
+
+        Session::put($this->getCartSessionKey(), $serialized);
     }
 
-    protected function fireEvent(string $event): void
+    protected function getCartSessionKey(): string
     {
-        $this->dispatch($event);
+        return match (true) {
+            filament()->auth()->user() instanceof Customer => 'customer_booking_cart_' . filament()->auth()->id(),
+            filament()->auth()->user() instanceof User => 'admin_booking_cart_' . filament()->auth()->id(),
+            default => 'guest_booking_cart',
+        };
     }
+
+    // ───── Slot and Group Slot Builder ─────
 
     protected function buildSlotData(string $date, int $courtId, ?string $courtName, int $hour): array
     {
         $start = Carbon::parse("{$date} {$hour}:00");
         $end = $start->copy()->addHour();
 
-        return [
-            'id'              => uniqid(),
-            'court_id'        => $courtId,
-            'court_name'      => $courtName ?? "Court #{$courtId}",
-            'date'            => $date,
-            'hour'            => $hour,
-            'time'            => "{$start->format('H:i')} - {$end->format('H:i')}",
-            'formatted_date'  => Carbon::parse($date)->format('D, j M Y'),
-            'price'           => $this->getPricingService()->getPriceForHour($courtId, $date, $start),
-        ];
+        $slot = new SelectedSlot(
+            id: uniqid(),
+            courtId: $courtId,
+            courtName: $courtName ?? "Court #{$courtId}",
+            date: $date,
+            hour: $hour,
+            formattedTime: "{$start->format('H:i')} - {$end->format('H:i')}",
+            formattedDate: $start->format('D, j M Y'),
+            price: $this->getPricingService()->getPriceForHour($courtId, $date, $start),
+        );
+
+        return $slot->toArray();
     }
 
-    /**
-     * Override this in your component to implement actual logic.
-     */
+    protected function groupConsecutiveSlots(Collection $grouped): Collection
+    {
+        $grouped = $grouped->sortBy('hour')->values();
+        $blocks = [];
+        $currentBlock = [$grouped->first()];
+
+        for ($i = 1; $i < $grouped->count(); $i++) {
+            $prev = $grouped[$i - 1];
+            $curr = $grouped[$i];
+
+            if ($curr->hour === $prev->hour + 1) {
+                $currentBlock[] = $curr;
+            } else {
+                $blocks[] = collect($currentBlock);
+                $currentBlock = [$curr];
+            }
+        }
+
+        $blocks[] = collect($currentBlock);
+
+        return collect($blocks)->map(fn($block) => SelectedSlotGroup::fromSelectedSlots($block));
+    }
+
+
+    // ───── Dependencies ─────
+
     protected function checkSlotConflict(int $courtId, Carbon $start, Carbon $end, array $excludeSlotIds = []): bool
     {
         return $this->getBookingSlotService()->checkSlotConflict($courtId, $start, $end, $excludeSlotIds);
@@ -246,5 +207,50 @@ trait InteractsWithBookingCart
     protected function getPricingService(): PricingRuleService
     {
         return app(PricingRuleService::class);
+    }
+
+    // ───── Event Dispatcher ─────
+
+    protected function fireEvent(string $event): void
+    {
+        if (method_exists($this, 'dispatch')) {
+            $this->dispatch($event);
+        }
+    }
+
+    // ───── Reschedule Logic ─────
+
+    public function isRescheduled($originalBooking): void
+    {
+        $originalBookingKey = "{$originalBooking->court_id}_{$originalBooking->date->format('Y-m-d')}_{$originalBooking->starts_at->format('H:i')}_{$originalBooking->ends_at->format('H:i')}";
+
+        $groups = $this->getGroupedSlots();
+
+        if ($groups->isEmpty()) {
+            throw ValidationException::withMessages(['cart' => 'Cart is empty.']);
+        }
+
+        foreach ($groups as $group) {
+            $courtId = $group->courtId;
+            $courtName = $group->courtName ?? "Court #{$courtId}";
+            $date = $group->date;
+
+            $start = Carbon::parse("{$date} {$group->slots->min('hour')}:00");
+            $end = Carbon::parse("{$date} {$group->slots->max('hour')}:00")->addHour();
+
+            $slotKey = "{$courtId}_{$date}_{$start->format('H:i')}_{$end->format('H:i')}";
+
+            if ($originalBookingKey === $slotKey) {
+                throw ValidationException::withMessages([
+                    'cart' => "⚠️ The new booking is the same as the original booking for {$courtName} on {$date} at {$start->format('H:i')} - {$end->format('H:i')}."
+                ]);
+            }
+        }
+    }
+
+    public function checkRescheduleConflicts($originalBooking): void
+    {
+        $this->isRescheduled($originalBooking);
+        $this->checkBookingConflicts($originalBooking->slots->pluck('id')->all());
     }
 }

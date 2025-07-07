@@ -10,7 +10,7 @@ class BookingCart extends Component
 {
     use InteractsWithBookingCart;
 
-    public array $groupedSlots = [];
+    protected $groupedSlots;
     public int $cartTotal = 0;
     public string $checkoutUrl = '';
     public bool $showActions = true;
@@ -24,6 +24,11 @@ class BookingCart extends Component
         ];
     }
 
+    public function getGroupedSlotsProperty(): array
+    {
+        return collect($this->groupedSlots)->map->toArray()->all();
+    }
+
     public function mount(string $checkoutUrl = 'https://google.com', bool $showActions = true)
     {
         $this->checkoutUrl = $checkoutUrl;
@@ -33,7 +38,7 @@ class BookingCart extends Component
 
     public function refreshCart(): void
     {
-        $this->groupedSlots = $this->getGroupedSlots()->toArray();
+        $this->groupedSlots = $this->getGroupedSlots();
         $this->cartTotal = $this->calculateCartTotal();
     }
 
