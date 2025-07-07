@@ -2,6 +2,7 @@
 
 namespace App\DTOs\BookingCart;
 
+use App\DTOs\Slot\SlotData;
 use Carbon\Carbon;
 
 class SelectedSlot
@@ -10,9 +11,9 @@ class SelectedSlot
         public string $id,
         public int $courtId,
         public string $courtName,
-        public string $date, // YYYY-MM-DD
-        public int $hour, // 14 (2pm)
-        public string $formattedTime, // "14:00 - 15:00"
+        public string $date,
+        public int $hour,
+        public string $formattedTime,
         public string $formattedDate,
         public int $price,
         public ?string $status = null,
@@ -34,6 +35,23 @@ class SelectedSlot
             status: $data['status'] ?? null,
             isBookable: $data['is_bookable'] ?? null,
             meta: $data['meta'] ?? [],
+        );
+    }
+
+    public static function fromSlotData(SlotData $data): self
+    {
+        return new self(
+            id: uniqid(),
+            courtId: $data->courtId,
+            courtName: $data->courtName,
+            date: $data->date,
+            hour: $data->hour,
+            formattedTime: $data->formattedTime,
+            formattedDate: $data->formattedDate,
+            price: $data->price,
+            status: $data->status,
+            isBookable: $data->isBookable,
+            meta: [],
         );
     }
 
