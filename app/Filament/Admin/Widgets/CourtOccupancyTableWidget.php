@@ -78,11 +78,20 @@ class CourtOccupancyTableWidget extends BaseWidget
                     ->columnSpanFull()
                     ->query(function (Builder $query, array $data) {
                         return $query
-                            ->when($data['from'], fn($q) => $q->where('date', '>=', $data['from']))
-                            ->when($data['to'], fn($q) => $q->where('date', '<=', $data['to']))
                             ->when(
                                 $data['from'] && $data['to'],
-                                fn($q) => $q->whereBetween('date', [$data['from'], $data['to']])
+                                fn($q) => $q->whereBetween('date', [
+                                    \Carbon\Carbon::parse($data['from'])->startOfDay(),
+                                    \Carbon\Carbon::parse($data['to'])->endOfDay(),
+                                ])
+                            )
+                            ->when(
+                                $data['from'] && !$data['to'],
+                                fn($q) => $q->where('date', '>=', \Carbon\Carbon::parse($data['from'])->startOfDay())
+                            )
+                            ->when(
+                                !$data['from'] && $data['to'],
+                                fn($q) => $q->where('date', '<=', \Carbon\Carbon::parse($data['to'])->endOfDay())
                             );
                     }),
             ], layout: FiltersLayout::AboveContentCollapsible)
