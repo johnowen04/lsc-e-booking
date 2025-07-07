@@ -2,7 +2,6 @@
 
 namespace App\Filament\Admin\Widgets;
 
-use App\Models\BookingSlot;
 use App\Models\CourtScheduleSlot;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Grid;
@@ -21,46 +20,22 @@ class CourtOccupancyTableWidget extends BaseWidget
     protected int | string | array $columnSpan = 'full';
     protected static bool $isDiscovered = false;
 
-    public function getTableQuery(): Builder
-    {
-        $from = $this->tableFilters['date_range']['from'] ?? now()->toDateString();
-        $to = $this->tableFilters['date_range']['to'] ?? now()->toDateString();
-
-        $fromDate = \Carbon\Carbon::parse($from)->startOfDay();
-        $toDate = \Carbon\Carbon::parse($to)->endOfDay();
-        $days = $fromDate->diffInDays($toDate) + 1; // inclusive
-
-        $slotsPerDay = 14;
-        $expectedSlotsPerCourt = $days * $slotsPerDay;
-
-        return BookingSlot::query()
-            ->select([
-                'booking_slots.court_id',
-                'courts.name as court_name',
-                DB::raw("{$expectedSlotsPerCourt} as total_slots"),
-                DB::raw("COUNT(*) FILTER (WHERE booking_slots.status IN ('confirmed', 'held')) as booked_slots"),
-                DB::raw("ROUND(
-                COUNT(*) FILTER (WHERE booking_slots.status IN ('confirmed', 'held'))::decimal
-                / NULLIF({$expectedSlotsPerCourt}, 0) * 100, 1
-            ) as booked_rate"),
-                DB::raw("COUNT(*) FILTER (WHERE booking_slots.status = 'attended') as attended_slots"),
-                DB::raw("ROUND(
-                COUNT(*) FILTER (WHERE booking_slots.status = 'attended')::decimal
-                / NULLIF({$expectedSlotsPerCourt}, 0) * 100, 1
-            ) as occupancy_rate"),
-            ])
-            ->join('courts', 'booking_slots.court_id', '=', 'courts.id')
-            ->whereBetween('booking_slots.date', [$fromDate->toDateString(), $toDate->toDateString()])
-            ->groupBy('booking_slots.court_id', 'courts.name')
-            ->orderBy('booking_slots.court_id', 'desc');
-    }
-
     public function table(Table $table): Table
     {
         return $table
             ->query(
-                CourtScheduleSlot::with('court')
-                    ->groupBy(['id', 'court_id'])
+                CourtScheduleSlot::query()
+                    ->select([
+                        'court_id',
+                        DB::raw('COUNT(id) as total_slots'),
+                        DB::raw("SUM(CASE WHEN status IN ('held', 'confirmed') THEN 1 ELSE 0 END) as booked_slots"),
+                        DB::raw("ROUND(1.0 * SUM(CASE WHEN status IN ('held', 'confirmed') THEN 1 ELSE 0 END) / COUNT(id) * 100.0, 1) as booked_rate"),
+                        DB::raw("SUM(CASE WHEN status = 'attended' THEN 1 ELSE 0 END) as attended_slots"),
+                        DB::raw("ROUND(1.0 * SUM(CASE WHEN status = 'attended' THEN 1 ELSE 0 END) / COUNT(id) * 100.0, 1) as occupancy_rate"),
+                    ])
+                    ->groupBy('court_id')
+                    ->with('court')
+                    ->orderBy('court_id', 'asc')
             )
             ->columns([
                 Tables\Columns\TextColumn::make('court.name')
@@ -74,13 +49,15 @@ class CourtOccupancyTableWidget extends BaseWidget
                     ->numeric(),
                 Tables\Columns\TextColumn::make('booked_rate')
                     ->label('Booked Rate (%)')
-                    ->numeric(decimalPlaces: 1),
+                    ->numeric(decimalPlaces: 1)
+                    ->formatStateUsing(fn($state) => "{$state}%"),
                 Tables\Columns\TextColumn::make('attended_slots')
                     ->label('Attended Slots')
                     ->numeric(),
                 Tables\Columns\TextColumn::make('occupancy_rate')
                     ->label('Occupancy Rate (%)')
-                    ->numeric(decimalPlaces: 1),
+                    ->numeric(decimalPlaces: 1)
+                    ->formatStateUsing(fn($state) => "{$state}%"),
             ])
             ->filters([
                 Filter::make('date_range')
