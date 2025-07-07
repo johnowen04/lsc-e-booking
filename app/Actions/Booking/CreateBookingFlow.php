@@ -2,11 +2,17 @@
 
 namespace App\Actions\Booking;
 
+use App\DTOs\Booking\CreateBookingData;
+use App\DTOs\BookingCart\SelectedSlot;
+use App\DTOs\BookingInvoice\CreateBookingInvoiceData;
+use App\DTOs\BookingSlot\CreateBookingSlotData;
 use App\DTOs\Payment\CreatePaymentData;
 use App\DTOs\Shared\CreatedByData;
 use App\DTOs\Shared\CustomerInfoData;
 use App\DTOs\Shared\InvoiceReference;
 use App\DTOs\Shared\MoneyData;
+use App\Models\Booking;
+use App\Models\BookingInvoice;
 use App\Models\Payment;
 use App\Processors\Payment\PaymentProcessor;
 use App\Services\BookingService;
@@ -14,39 +20,40 @@ use App\Services\BookingSlotService;
 use App\Services\CourtSlotAvailabilityService;
 use App\Services\InvoiceService;
 use App\Services\PricingRuleService;
+use Carbon\Carbon;
+use Closure;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
-class CreateBookingFlow extends AbstractBookingFlow
+class CreateBookingFlow
 {
     public function __construct(
-        CourtSlotAvailabilityService $courtSlotAvailabilityService,
-        BookingService $bookingService,
-        BookingSlotService $bookingSlotService,
-        InvoiceService $invoiceService,
-        PricingRuleService $pricingRuleService,
-        PaymentProcessor $paymentProcessor,
-    ) {
-        parent::__construct($courtSlotAvailabilityService, $bookingService, $bookingSlotService, $invoiceService, $pricingRuleService, $paymentProcessor);
-    }
+        protected CourtSlotAvailabilityService $courtSlotAvailabilityService,
+        protected BookingService $bookingService,
+        protected BookingSlotService $bookingSlotService,
+        protected InvoiceService $invoiceService,
+        protected PricingRuleService $pricingRuleService,
+        protected PaymentProcessor $paymentProcessor,
+    ) {}
 
-    public function execute(array $formData, Collection $groupedSlots, ?array $options = null): Payment
+    public function execute(array $formData, Collection $selectedSlotGroups, ?array $options = null): Payment
     {
-        $customerDto = CustomerInfoData::fromArray($formData);
         $createdByDto = CreatedByData::fromModel($options['creator']);
-        $paymentMethod = $formData['payment_method'];
-        $isPaidInFull = $formData['is_paid_in_full'];
-        $isWalkIn = $options['is_walk_in'];
+        $customerDto = CustomerInfoData::fromArray($formData);
+
         $callbackClass = $options['callback_class'];
+        $isWalkIn = $options['is_walk_in'];
+        $isPaidInFull = $formData['is_paid_in_full'];
+        $paymentMethod = $formData['payment_method'];
 
         return DB::transaction(function () use (
-            $groupedSlots,
-            $customerDto,
             $createdByDto,
-            $paymentMethod,
-            $isPaidInFull,
+            $customerDto,
+            $callbackClass,
             $isWalkIn,
-            $callbackClass
+            $isPaidInFull,
+            $paymentMethod,
+            $selectedSlotGroups,
         ) {
             $invoice = $this->createInvoice(
                 $customerDto,
@@ -59,7 +66,7 @@ class CreateBookingFlow extends AbstractBookingFlow
             );
 
             $bookings = $this->createBookings(
-                $groupedSlots,
+                $selectedSlotGroups,
                 $invoice,
                 $customerDto,
                 $createdByDto
@@ -74,10 +81,7 @@ class CreateBookingFlow extends AbstractBookingFlow
                 ),
                 $paymentMethod,
                 $createdByDto,
-                new InvoiceReference(
-                    type: get_class($invoice),
-                    id: $invoice->id,
-                )
+                new InvoiceReference(get_class($invoice), $invoice->id)
             );
 
             return $this->createPayment(
@@ -86,5 +90,101 @@ class CreateBookingFlow extends AbstractBookingFlow
                 $callbackClass
             );
         });
+    }
+
+    protected function createInvoice(CustomerInfoData $customer, MoneyData $amount, string $status, bool $isWalkIn, CreatedByData $createdBy): BookingInvoice
+    {
+        $invoiceDto = new CreateBookingInvoiceData(
+            customer: $customer,
+            amount: $amount,
+            status: $status,
+            isWalkIn: $isWalkIn,
+            createdBy: $createdBy,
+            issuedAt: Carbon::now(),
+            dueAt: Carbon::now()->addMinutes(15),
+        );
+
+        return $this->invoiceService->createBookingInvoice($invoiceDto);
+    }
+
+    protected function createBookings(
+        Collection $selectedSlotGroups,
+        BookingInvoice $invoice,
+        CustomerInfoData $customer,
+        CreatedByData $createdBy
+    ): array {
+        $bookings = [];
+
+        /** @var \Illuminate\Support\Collection<\App\DTOs\BookingCart\SelectedSlotGroup> $selectedSlotGroups */
+        foreach ($selectedSlotGroups as $group) {
+            $bookingDto = new CreateBookingData(
+                invoiceId: $invoice->id,
+                customer: $customer,
+                courtId: $group->courtId,
+                date: Carbon::parse($group->date),
+                startsAt: Carbon::parse($group->date . ' ' . $group->startsAt),
+                endsAt: Carbon::parse($group->date . ' ' . $group->endsAt),
+                mustCheckInBefore: Carbon::parse($group->date . ' ' . $group->startsAt)->copy()->addMinutes(15),
+                createdBy: $createdBy,
+                note: null,
+                rescheduledFromBookingId: null,
+            );
+
+            $booking = $this->bookingService->createBooking($bookingDto);
+
+            $slots = $this->createBookingSlots($booking, $group->slots, $group->courtId);
+
+            $booking->update([
+                'total_price' => collect($slots)->sum('price'),
+            ]);
+
+            $bookings[] = $booking;
+        }
+
+        return $bookings;
+    }
+
+    protected function createBookingSlots(Booking $booking, Collection $slotPayloads, int $courtId): array
+    {
+        $slotDtos = $slotPayloads->map(function (SelectedSlot $slot) use ($booking, $courtId) {
+            $hour = Carbon::createFromTimeString("{$slot->hour}:00");
+
+            $pricingRule = $this->pricingRuleService->getPricingRuleForHour(
+                $courtId,
+                $slot->date,
+                $hour
+            );
+
+            $startHour = Carbon::parse("{$slot->date} {$slot->hour}:00");
+            $date = Carbon::parse($slot->date);
+
+            $courtScheduleSlot = $this->courtSlotAvailabilityService->reserve(
+                $courtId,
+                $date,
+                $startHour
+            );
+
+            return new CreateBookingSlotData(
+                bookingId: $booking->id,
+                courtId: $courtId,
+                date: Carbon::parse($slot->date),
+                startAt: $startHour,
+                endAt: $startHour->copy()->addHour(),
+                price: $pricingRule->price_per_hour,
+                pricingRuleId: $pricingRule->id ?? null,
+                courtScheduleSlotId: $courtScheduleSlot->id,
+            );
+        })->toArray();
+
+        return $this->bookingSlotService->createBookingSlots($slotDtos);
+    }
+
+    protected function createPayment(CreatePaymentData $initialPayment, Closure|string $itemDetailName, string $callbackClass): Payment
+    {
+        return $this->paymentProcessor->handle(
+            $initialPayment,
+            $itemDetailName,
+            $callbackClass
+        );
     }
 }

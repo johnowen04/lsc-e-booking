@@ -26,7 +26,7 @@ class BookingCart extends Component
 
     public function getGroupedSlotsProperty(): array
     {
-        return collect($this->groupedSlots)->map->toArray()->all();
+        return $this->groupedSlots->map->toArray();
     }
 
     public function mount(string $checkoutUrl = 'https://google.com', bool $showActions = true)

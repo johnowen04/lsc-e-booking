@@ -36,10 +36,7 @@ class RepaymentBookingFlow
                 ),
                 $paymentMethod,
                 $createdByDto,
-                new InvoiceReference(
-                    type: get_class($invoice),
-                    id: $invoice->id,
-                )
+                new InvoiceReference(get_class($invoice), $invoice->id)
             );
 
             return $this->paymentProcessor->handle(

@@ -118,7 +118,7 @@ class BookingCheckout extends Page
                     'callback_class' => CustomerPaymentStatus::class,
                 ]
             );
-            
+
             $this->clearBookingCart();
             redirect(CustomerPaymentStatus::getUrl(['order_id' => $payment->uuid]));
         } catch (\Throwable $th) {

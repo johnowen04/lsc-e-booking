@@ -67,8 +67,6 @@ class CreateBooking extends CreateRecord
 
     protected function handleRecordCreation(array $data): Model
     {
-        dd($data, $this->getGroupedSlots());
-
         try {
             $this->checkBookingConflicts();
 
