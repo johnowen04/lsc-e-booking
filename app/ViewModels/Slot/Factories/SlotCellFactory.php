@@ -74,6 +74,7 @@ class SlotCellFactory
             $isInSelection => 'Picked',
             $isOriginal => 'Book (Original)',
             $status === 'booked' => 'Booked',
+            $status === 'attended' => 'Attended',
             $status === 'held' => 'Held',
             $isDisabled && $inCart => 'In Cart',
             $isDisabled => 'Unavailable',

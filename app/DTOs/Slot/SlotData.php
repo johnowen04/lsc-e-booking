@@ -27,6 +27,7 @@ readonly class SlotData
         $status = match ($slot?->status) {
             'confirmed' => 'booked',
             'held' => 'held',
+            'attended' => 'attended',
             default => 'available',
         };
 

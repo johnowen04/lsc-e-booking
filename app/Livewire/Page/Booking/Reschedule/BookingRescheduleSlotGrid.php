@@ -250,7 +250,7 @@ class BookingRescheduleSlotGrid extends Component
         return collect(range($startHour, $endHour - 1))->map(function ($hour) use (
             $scheduleSlots,
             $bookingDate,
-            $cutoff
+            $cutoff,
         ) {
             $slotStart = $bookingDate->copy()->setTime($hour, 0);
             $slotEnd = $slotStart->copy()->addHour();
