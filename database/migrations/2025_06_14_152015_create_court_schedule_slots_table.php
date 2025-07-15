@@ -19,7 +19,7 @@ return new class extends Migration
             $table->dateTime('end_at');
             $table->decimal('price', 10, 2)->nullable();
             $table->foreignId('pricing_rule_id')->nullable()->constrained('pricing_rules')->nullOnDelete();
-            $table->enum('status', ['available', 'held', 'confirmed', 'attended'])->default('available');
+            $table->enum('status', ['available', 'held', 'confirmed', 'attended', 'no_show'])->default('available');
             $table->timestamps();
 
             $table->unique(['court_id', 'start_at']);

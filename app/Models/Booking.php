@@ -117,6 +117,11 @@ class Booking extends Model
         if ($this->invoice->status === 'paid') {
             $this->attendance_status = 'attended';
             $this->attended_at = now();
+            $this->slots()->each(function ($slot) {
+                if ($slot->courtScheduleSlot) {
+                    $slot->courtScheduleSlot->update(['status' => 'attended']);
+                }
+            });
             $this->save();
 
             return true;
