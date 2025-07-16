@@ -5,6 +5,16 @@
 
     <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700 dark:text-gray-200">
         <div>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Booking Number</dt>
+            <dd class="mt-1 font-semibold">{{ $booking->booking_number }}</dd>
+        </div>
+
+        <div>
+            <dt class="font-medium text-gray-500 dark:text-gray-400">Total Price</dt>
+            <dd class="mt-1 font-semibold">Rp{{ number_format($booking->total_price, 0, ',', '.') }}</dd>
+        </div>
+
+        <div>
             <dt class="font-medium text-gray-500 dark:text-gray-400">Court</dt>
             <dd class="mt-1 font-semibold">{{ $booking->court->name }}</dd>
         </div>
