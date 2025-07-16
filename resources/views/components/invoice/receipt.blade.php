@@ -57,6 +57,13 @@
                 <span class="font-bold text-center block">Fully paid. Thank You!</span>
             </div>
         @endif
+        <br>
+        <div class="text-gray-800 dark:text-gray-200">
+            <span class="font-bold text-center block">
+                Harap hadir maksimal 15 menit setelah waktu booking dimulai. Jika tidak, booking Anda akan otomatis
+                dibatalkan atau dianggap hangus.
+            </span>
+        </div>
     </div>
 
     <div class="text-gray-800 dark:text-gray-200">

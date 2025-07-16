@@ -6,6 +6,13 @@
             <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Booking Invoice</h2>
         </div>
 
+        <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-900 p-4 mb-6 rounded shadow">
+            <p class="font-medium">
+                ⚠️ Harap hadir maksimal 15 menit setelah waktu booking dimulai. Jika tidak, booking Anda akan otomatis
+                dibatalkan atau dianggap hangus.
+            </p>
+        </div>
+        
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-700 dark:text-gray-300">
             <div class="flex justify-between items-center">
                 <span class="font-medium text-gray-600 dark:text-gray-400">Status:</span>

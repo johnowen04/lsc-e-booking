@@ -1,5 +1,11 @@
 <x-filament-panels::page>
     <link rel="stylesheet" href="{{ asset('css/livewire-component/theme.css') }}">
+    <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-900 p-4 mb-6 rounded shadow">
+        <p class="font-medium">
+            ⚠️ Harap hadir maksimal 15 menit setelah waktu booking dimulai. Jika tidak, booking Anda akan otomatis
+            dibatalkan atau dianggap hangus.
+        </p>
+    </div>
     <div class="flex flex-col lg:flex-row gap-4">
         <div class="w-full lg:w-1/2 pt-0">
             <x-filament::section>
