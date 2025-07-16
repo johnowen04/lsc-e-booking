@@ -62,7 +62,7 @@ class CustomerPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             ->authMiddleware([
-                // Authenticate::class,
+                Authenticate::class,
             ])
             ->theme(asset('css/filament/customer/theme.css'))
             ->renderHook(
