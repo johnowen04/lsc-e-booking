@@ -16,12 +16,6 @@ if [ ! -f ".env" ]; then
   exit 1
 fi
 
-# Generate app key if missing
-if ! grep -q "^APP_KEY=base64:" .env; then
-  echo "🔐 No app key found. Generating app key..."
-  php artisan key:generate --no-interaction
-fi
-
 # Run database migrations
 echo "🗃️ Running migrations..."
 php artisan migrate --force || echo "⚠️ Warning: Migration failed."
