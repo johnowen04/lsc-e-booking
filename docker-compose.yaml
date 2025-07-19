@@ -35,6 +35,10 @@ services:
     networks:
       - web
     entrypoint: ["sh", "./docker/entrypoint.sh"]
+    depends_on:
+      - app
+      - redis
+      - postgres
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.laravel.rule=Host(`erplsc.duckdns.org`)"
@@ -93,7 +97,7 @@ services:
       - app
 
   env-updater:
-    image: alpine:latest
+    image: alpine:3.18
     container_name: bookingsys-env-updater
     restart: on-failure
     volumes:
@@ -101,15 +105,16 @@ services:
     working_dir: /app
     depends_on:
       - ngrok
-      - app
     networks:
       - web
     entrypoint: >
       sh -c "
-        apk add curl sed --no-cache;
-        echo '⏳ Waiting for ngrok...';
-        until curl -s http://ngrok:4040/api/tunnels | grep -q 'https'; do sleep 1; done;
-        NGROK_URL=$(curl -s http://ngrok:4040/api/tunnels | grep -o 'https://[^\"\\]*' | head -n1);
+        apk add --no-cache curl jq sed;
+        echo '⏳ Waiting for ngrok tunnel...';
+        until curl -s http://ngrok:4040/api/tunnels | jq -e '.tunnels[0].public_url' > /dev/null 2>&1; do
+          sleep 1;
+        done;
+        NGROK_URL=$(curl -s http://ngrok:4040/api/tunnels | jq -r '.tunnels[0].public_url');
         echo '✅ ngrok URL: '$NGROK_URL;
         sed -i 's|^APP_URL=.*|APP_URL='$NGROK_URL'|' .env;
         sed -i 's|^ASSET_URL=.*|ASSET_URL='$NGROK_URL'|' .env;
