@@ -1,0 +1,128 @@
+services:
+  traefik:
+    image: traefik:latest
+    container_name: bookingsys-traefik
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--certificatesresolvers.letsencrypt.acme.email=certificate@bookingsystem.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./traefik/acme.json:/letsencrypt/acme.json"
+    networks:
+      - web
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: bookingsys-app
+    container_name: bookingsys-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - .:/var/www/html
+      - vendor:/var/www/html/vendor
+    networks:
+      - web
+    entrypoint: ["sh", "./docker/entrypoint.sh"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.laravel.rule=Host(`erplsc.duckdns.org`)"
+      - "traefik.http.routers.laravel.entrypoints=websecure"
+      - "traefik.http.routers.laravel.tls.certresolver=letsencrypt"
+      - "traefik.http.services.laravel.loadbalancer.server.port=80"
+
+  queue:
+    image: bookingsys-app
+    container_name: bookingsys-queue
+    restart: unless-stopped
+    command: php artisan queue:work --verbose --tries=3 --timeout=90
+    env_file:
+      - .env
+    depends_on:
+      - app
+      - redis
+      - postgres
+    networks:
+      - web
+
+  postgres:
+    image: postgres:latest
+    container_name: bookingsys-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - web
+
+  redis:
+    image: redis:latest
+    container_name: bookingsys-redis
+    restart: unless-stopped
+    networks:
+      - web
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: bookingsys-ngrok
+    restart: unless-stopped
+    command: http app:80
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040"
+    networks:
+      - web
+    depends_on:
+      - app
+
+  env-updater:
+    image: alpine:latest
+    container_name: bookingsys-env-updater
+    restart: on-failure
+    volumes:
+      - .:/app
+    working_dir: /app
+    depends_on:
+      - ngrok
+      - app
+    networks:
+      - web
+    entrypoint: >
+      sh -c "
+        apk add curl sed --no-cache;
+        echo '⏳ Waiting for ngrok...';
+        until curl -s http://ngrok:4040/api/tunnels | grep -q 'https'; do sleep 1; done;
+        NGROK_URL=$(curl -s http://ngrok:4040/api/tunnels | grep -o 'https://[^\"\\]*' | head -n1);
+        echo '✅ ngrok URL: '$NGROK_URL;
+        sed -i 's|^APP_URL=.*|APP_URL='$NGROK_URL'|' .env;
+        sed -i 's|^ASSET_URL=.*|ASSET_URL='$NGROK_URL'|' .env;
+        echo '🔁 Refreshing Laravel config...';
+        docker exec bookingsys-app php artisan config:clear;
+        docker exec bookingsys-app php artisan config:cache;
+      "
+
+volumes:
+  pgdata:
+  vendor:
+
+networks:
+  web:
+    driver: bridge
