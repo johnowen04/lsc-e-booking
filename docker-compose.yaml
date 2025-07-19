@@ -31,7 +31,6 @@ services:
     env_file:
       - .env
     volumes:
-      - .:/var/www/html
       - vendor:/var/www/html/vendor
     networks:
       - web
@@ -114,9 +113,6 @@ services:
         echo '✅ ngrok URL: '$NGROK_URL;
         sed -i 's|^APP_URL=.*|APP_URL='$NGROK_URL'|' .env;
         sed -i 's|^ASSET_URL=.*|ASSET_URL='$NGROK_URL'|' .env;
-        echo '🔁 Refreshing Laravel config...';
-        docker exec bookingsys-app php artisan config:clear;
-        docker exec bookingsys-app php artisan config:cache;
       "
 
 volumes:

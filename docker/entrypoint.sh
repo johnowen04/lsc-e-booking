@@ -10,6 +10,12 @@ if [ ! -f "vendor/autoload.php" ]; then
   exit 1
 fi
 
+# Ensure .env exists
+if [ ! -f ".env" ]; then
+  echo "❌ .env file not found. Copy .env.example or provide one."
+  exit 1
+fi
+
 # Generate app key if missing
 if ! grep -q "^APP_KEY=base64:" .env; then
   echo "🔐 No app key found. Generating app key..."
@@ -24,15 +30,23 @@ php artisan migrate --force || echo "⚠️ Warning: Migration failed."
 echo "🌱 Seeding database..."
 php artisan db:seed --force || echo "⚠️ Warning: Seeding failed."
 
-# Generate Filament Shield permissions (admin panel)
+# Generate Filament Shield permissions
 echo "🛡️ Generating Filament Shield permissions..."
 php artisan shield:generate --all --panel=admin || echo "⚠️ Warning: Failed to generate Shield permissions."
 
-# Cache Laravel config, routes, views
-echo "🗂️ Caching Laravel config, routes, and views..."
-php artisan config:cache || echo "⚠️ config:cache failed"
-php artisan route:cache || echo "⚠️ route:cache failed"
-php artisan view:cache || echo "⚠️ view:cache failed"
+# If APP_URL looks like ngrok HTTPS, clear + refresh config
+if grep -q '^APP_URL=https://' .env; then
+  echo "🔁 Detected updated APP_URL from Ngrok. Refreshing Laravel config..."
+  php artisan config:clear
+  php artisan route:clear
+  php artisan view:clear
+
+  php artisan config:cache || echo "⚠️ config:cache failed"
+  php artisan route:cache || echo "⚠️ route:cache failed"
+  php artisan view:cache || echo "⚠️ view:cache failed"
+else
+  echo "ℹ️ APP_URL is not Ngrok or not set. Skipping config cache refresh."
+fi
 
 # Start PHP-FPM
 echo "🚀 Starting PHP-FPM..."
