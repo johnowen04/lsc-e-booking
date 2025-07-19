@@ -24,9 +24,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if (app()->environment('production')) {
-            URL::forceHttps();
-        }
+        // if (app()->environment('production')) {
+        //     URL::forceHttps();
+        // }
+
+        URL::forceScheme('https');
 
         Court::observe(CourtObserver::class);
         PricingRule::observe(PricingRuleObserver::class);

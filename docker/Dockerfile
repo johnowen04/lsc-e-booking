@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     git \
     curl \
+    jq \
     libzip-dev \
     libicu-dev \
     libjpeg-dev \
@@ -35,6 +36,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     git \
     curl \
+    jq \
     libpq-dev \
     libzip-dev \
     libicu-dev \
@@ -65,7 +67,7 @@ COPY . .
 COPY --from=composer /var/www/html/vendor ./vendor
 
 # Optional: Ensure correct permissions (uncomment if needed)
-# RUN chown -R www-data:www-data /var/www/html \
-#     && chmod -R 755 /var/www/html
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html
 
 # Default command (defined via docker-compose entrypoint)

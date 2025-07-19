@@ -36,15 +36,28 @@ services:
       - web
     entrypoint: ["sh", "./docker/entrypoint.sh"]
     depends_on:
-      - app
       - redis
       - postgres
+
+  nginx:
+    image: nginx:alpine
+    container_name: bookingsys-nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+    volumes:
+      - .:/var/www/html
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - web
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.laravel.rule=Host(`erplsc.duckdns.org`)"
+      - "traefik.http.routers.laravel.rule=Host(`robust-distinctly-manatee.ngrok-free.app`) || Host(`erplsc.duckdns.org`)"
       - "traefik.http.routers.laravel.entrypoints=websecure"
       - "traefik.http.routers.laravel.tls.certresolver=letsencrypt"
       - "traefik.http.services.laravel.loadbalancer.server.port=80"
+      - "traefik.http.routers.laravel.middlewares=https-header@docker"
+      - "traefik.http.middlewares.https-header.headers.customrequestheaders.X-Forwarded-Proto=https"
 
   queue:
     image: bookingsys-app
@@ -81,44 +94,6 @@ services:
     restart: unless-stopped
     networks:
       - web
-
-  ngrok:
-    image: ngrok/ngrok:latest
-    container_name: bookingsys-ngrok
-    restart: unless-stopped
-    command: http app:80
-    environment:
-      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
-    ports:
-      - "4040:4040"
-    networks:
-      - web
-    depends_on:
-      - app
-
-  env-updater:
-    image: alpine:3.18
-    container_name: bookingsys-env-updater
-    restart: on-failure
-    volumes:
-      - .:/app
-    working_dir: /app
-    depends_on:
-      - ngrok
-    networks:
-      - web
-    entrypoint: >
-      sh -c "
-        apk add --no-cache curl jq sed;
-        echo '⏳ Waiting for ngrok tunnel...';
-        until curl -s http://ngrok:4040/api/tunnels | jq -e '.tunnels[0].public_url' > /dev/null 2>&1; do
-          sleep 1;
-        done;
-        NGROK_URL=$(curl -s http://ngrok:4040/api/tunnels | jq -r '.tunnels[0].public_url');
-        echo '✅ ngrok URL: '$NGROK_URL;
-        sed -i 's|^APP_URL=.*|APP_URL='$NGROK_URL'|' .env;
-        sed -i 's|^ASSET_URL=.*|ASSET_URL='$NGROK_URL'|' .env;
-      "
 
 volumes:
   pgdata:

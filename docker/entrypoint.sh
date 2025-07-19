@@ -34,9 +34,9 @@ php artisan db:seed --force || echo "⚠️ Warning: Seeding failed."
 echo "🛡️ Generating Filament Shield permissions..."
 php artisan shield:generate --all --panel=admin || echo "⚠️ Warning: Failed to generate Shield permissions."
 
-# If APP_URL looks like ngrok HTTPS, clear + refresh config
+# Refresh Laravel config if APP_URL is set
 if grep -q '^APP_URL=https://' .env; then
-  echo "🔁 Detected updated APP_URL from Ngrok. Refreshing Laravel config..."
+  echo "🔁 Detected Ngrok APP_URL. Refreshing Laravel caches..."
   php artisan config:clear
   php artisan route:clear
   php artisan view:clear
@@ -45,7 +45,7 @@ if grep -q '^APP_URL=https://' .env; then
   php artisan route:cache || echo "⚠️ route:cache failed"
   php artisan view:cache || echo "⚠️ view:cache failed"
 else
-  echo "ℹ️ APP_URL is not Ngrok or not set. Skipping config cache refresh."
+  echo "ℹ️ APP_URL is not HTTPS. Skipping config cache refresh."
 fi
 
 # Start PHP-FPM
